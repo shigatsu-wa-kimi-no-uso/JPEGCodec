@@ -2,6 +2,10 @@
 #include "typedef.h"
 #include <cmath>
 
+
+
+
+
 class Quantizer
 {
 private:
@@ -38,11 +42,11 @@ public:
 		}
 	}
 
-	void quantize(Sequence<DWORD>* outputSequence) {
+	void quantize(Matrix<DWORD>* outputSequence) {
 		for (int i = 0; i < _blockCnt; ++i) {
 			for (int x = 0; x < 8; ++x) {
 				for (int y = 0; y < 8; ++y) {
-					(*outputSequence)[_zigzag[x][y]] = (DWORD)std::round(_blocks[i][x][y]/_qtable[x][y]);
+					outputSequence[i][x][y] = (DWORD)std::round(_blocks[i][x][y] / _qtable[x][y]);
 				}
 			}
 		}

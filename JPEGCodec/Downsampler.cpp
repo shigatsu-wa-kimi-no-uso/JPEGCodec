@@ -68,6 +68,7 @@ void Downsampler::mean_sample(Matrix<float>* matrix_y, Matrix<float>* matrix_cb,
 			(*matrix_y)[i][j] = (*_ycbcrColors)[i][j].Y;
 		}
 	}
+
 	for (int i = 0; i < _ycbcrColors->row_cnt / _subsampFact_V; ++i) {
 		for (int j = 0; j < _ycbcrColors->column_cnt / _subsampFact_H; ++j) {
 			float sum_cb = 0, sum_cr = 0;

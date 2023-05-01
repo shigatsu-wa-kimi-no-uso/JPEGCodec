@@ -46,11 +46,10 @@ float ColorSpaceConverter::_normalize(const float val)
 }
 
 void ColorSpaceConverter::RGB2YCbCr(const RGBTriple* rgbColor, YCbCr* ycbcrColor) {
-	ycbcrColor->Y = _luma(rgbColor);
-	ycbcrColor->Cb =_blueChroma(rgbColor);
-	ycbcrColor->Cr = _redChroma(rgbColor);
+	ycbcrColor->Y = myround(_luma(rgbColor));
+	ycbcrColor->Cb = myround(_blueChroma(rgbColor));
+	ycbcrColor->Cr = myround(_redChroma(rgbColor));
 }
-
 
 void ColorSpaceConverter::RGB2YCbCr(const RGBTriple* rgbColors, const DWORD count, YCbCr* ycbcrColors) {
 	for (DWORD pos = 0; pos < count; ++pos) {
@@ -75,9 +74,9 @@ void ColorSpaceConverter::RGB2YCbCr(const Matrix<RGBQuad>* rgbMatrix, Matrix<YCb
 }
 
 void ColorSpaceConverter::YCbCr2RGB(const YCbCr* ycbcrColor, RGBTriple* rgbColor) {
-	rgbColor->rgbRed = _red(ycbcrColor);
-	rgbColor->rgbGreen = _green(ycbcrColor);
-	rgbColor->rgbBlue = _blue(ycbcrColor);
+	rgbColor->rgbRed = myround(_red(ycbcrColor));
+	rgbColor->rgbGreen = myround(_green(ycbcrColor));
+	rgbColor->rgbBlue = myround(_blue(ycbcrColor));
 }
 
 void ColorSpaceConverter::YCbCr2RGB(const YCbCr* ycbcrColors, const DWORD count, RGBTriple* rgbColors) {

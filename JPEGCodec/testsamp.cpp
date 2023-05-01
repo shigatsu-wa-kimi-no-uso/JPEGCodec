@@ -6,6 +6,7 @@
 #include "BMPFile.h"
 #include "Downsampler.h"
 #include "Windows.h"
+#include "CodingUnits.h"
 #include <thread>
 #include <mutex>
 #include <semaphore>
@@ -77,18 +78,11 @@ public:
 BMPFile bmpFile;
 const char* src;
 const char* dst;
-BYTE subsampFact_H;
-BYTE subsampFact_V;
+BYTE subsampFact_H, subsampFact_V;
+SubsampFact subsampFact;
 bool mean_samp_on;
 
-int myround(float val) {
-    int intval = val;
-    if (val - intval >= 0.5f) {
-        return intval + 1;
-    } else {
-        return intval;
-    }
-}
+
 
 void writeComponent(Matrix<BYTE>* outputBuffer,FILE* hOutput, Matrix<float>* compMatrix, DWORD fileOffset) {
     fseek(hOutput, fileOffset, SEEK_SET);
@@ -121,12 +115,12 @@ void encode2(LONG y_start, LONG y_end, int id) {
 
     if (bmpFile.getBitCount() == 24) {
         Matrix<RGBTriple> rgbMat = Matrix<RGBTriple>(thisBlockHeight, bmpFile.width());
-        bmpFile.readRGB(&rgbMat, y_start, y_end);
+     //   bmpFile.readRGB(&rgbMat, y_start, y_end);
         csc.RGB2YCbCr(&rgbMat, &ycbcrMat);
         rgbMat.~Matrix();
     } else if (bmpFile.getBitCount() == 32) {
         Matrix<RGBQuad> rgbMat = Matrix<RGBQuad>(thisBlockHeight, bmpFile.width());
-        bmpFile.readRGB(&rgbMat, y_start, y_end);
+     //   bmpFile.readRGB(&rgbMat, y_start, y_end);
         csc.RGB2YCbCr(&rgbMat, &ycbcrMat);
         rgbMat.~Matrix();
     }
@@ -219,7 +213,42 @@ void encode(BMPFile bmpFile, const char* outputFilePath, BYTE subsampFact_H,BYTE
     fclose(hOutput);
 }
 
-int main(int argc, char** argv)
+bool initialize(int argc, char** argv) {
+    const char* fact_h = getoptarg(argc, argv, "-fact_h");
+    const char* fact_v = getoptarg(argc, argv, "-fact_v");
+    src = getoptarg(argc, argv, "-src");
+    dst = getoptarg(argc, argv, "-dst");
+
+    if (src == nullptr || dst == nullptr || fact_h == nullptr || fact_v == nullptr) {
+        return false;
+    }
+
+    subsampFact.factor_h = atoi(fact_h);
+    subsampFact.factor_v = atoi(fact_v);
+    mean_samp_on = testopt(argc, argv, "-mean_samp");
+
+    printf("fact_h: %d fact_v: %d\n", (int)subsampFact.factor_h, (int)subsampFact.factor_v);
+
+    if (mean_samp_on) {
+        printf("Option -mean_samp: true\n");
+    } else {
+        printf("Option -mean_samp: false\n");
+    }
+
+    if (!bmpFile.load(src)) {
+        perror("Malformed BMP file or unsupported BMP format.");
+    }
+}
+
+int main(int argc, char** argv) {
+    CodingUnits units;
+    initialize(argc, argv);
+    ColorSpaceConverter csc;
+    Matrix<YCbCr> ycbcrMat = Matrix<YCbCr>(bmpFile.height(), bmpFile.width());
+    units.makeMCUs(&ycbcrMat, subsampFact);
+}
+
+int main3(int argc, char** argv)
 {
 	std::ios::sync_with_stdio(false);
 	const char* fact_h = getoptarg(argc, argv, "-fact_h");

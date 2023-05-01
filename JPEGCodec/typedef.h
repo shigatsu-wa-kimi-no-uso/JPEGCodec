@@ -4,6 +4,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <type_traits>
 #include <winsock.h>
+#define proc do
+#define endproc while(false)
+
+#define test(expr) if(expr) break
+
 
 using WORD = unsigned short;
 using DWORD = unsigned long;
@@ -26,7 +31,29 @@ inline WORD host_order(WORD val) {
 	return ntohs(val);
 }
 
+inline int myround(float val) {
+	int intval = val;
+	if (val - intval >= 0.5f) {
+		return intval + 1;
+	} else {
+		return intval;
+	}
+}
+
 #pragma pack(push,1)	//设置结构体为1字节对齐
+
+
+
+union SubsampFact{
+	enum : BYTE {
+		YUV_444 = 0x11,
+		YUV_440 = 0x12,
+		YUV_422 = 0x21,
+		YUV_420 = 0x22
+	}factor;
+	BYTE factor_v : 4;	//低4位 垂直采样因子
+	BYTE factor_h : 4;	//高4位 水平采样因子
+};
 
 struct BitmapFileHeader
 {
@@ -51,7 +78,6 @@ struct BitmapInfoHeader
 	DWORD biClrUsed;
 	DWORD biClrImportant;
 };
-
 
 
 struct RGBTriple
@@ -92,6 +118,7 @@ private:
 public:
 	const int column_cnt;
 	const int row_cnt;
+	Matrix(){}
 	Matrix(const int row_cnt, const int column_cnt)
 		:column_cnt(column_cnt), row_cnt(row_cnt) {
 		_2darr = new T * [row_cnt];
@@ -99,6 +126,8 @@ public:
 			_2darr[i] = new T[column_cnt];
 		}
 	}
+
+	
 	template<int _col_cnt, int _row_cnt>
 	Matrix(const T(&mat)[_row_cnt][_col_cnt]) 
 		:column_cnt(_col_cnt), row_cnt(_row_cnt) {
@@ -145,19 +174,20 @@ public:
 
 struct YCbCr
 {
-	float Y;
-	float Cb;
-	float Cr;
+	BYTE Y;
+	BYTE Cb;
+	BYTE Cr;
 };
 
-#define DCTBLOCK_COLCNT 8
-#define DCTBLOCK_ROWCNT 8
+#define BLOCK_COLCNT 8
+#define BLOCK_ROWCNT 8
+#define ALIGN(val,alignment_index)  (((val)+((1<<alignment_index) - 1)) & (~((1<<alignment_index) - 1)))
 
 struct Marker 
 {
-	enum Common	
+	enum Common	: WORD
 	{
-		SOI = 0XFFD8,	//文件开始标识符
+		SOI = 0xFFD8,	//文件开始标识符
 		EOI = 0xFFD9,	//文件结束标识符
 		SOS = 0xFFDA,	//数据段扫描起始符
 		DQT = 0xFFDB,	//量化表定义符
@@ -169,7 +199,7 @@ struct Marker
 		DAT_NIL=0xFF00	//数据段单字节为0
 	};
 
-	enum APP 
+	enum APP : WORD
 	{
 		APP0=0xFFE0,
 		APP1,
@@ -213,7 +243,7 @@ struct JPEG_JFIFHeader
 	{
 		WORD length;		//该段长度(除去marker的长度) length = 16 + 3*Xthumbnail*Ythumbnail
 		char identifier[5] = "JFIF";	//标识符 "JFIF"的ASCII码, '\0'结尾
-		BYTE version[2];	//版本
+		BYTE version[2];	//版本 1.01(version[0]=1 version[1]=1) 或1.02(version[0]=1 version[1]=2) etc 
 		enum Units : BYTE {
 			NONE,	//无, 使用像素纵横比
 			PPI,	//每英尺像素
@@ -224,13 +254,12 @@ struct JPEG_JFIFHeader
 		WORD Ydensity;		//垂直分辨率(units为0时,Xdensity和Ydensity表示像素纵横比,通常取Xdensity=1,Ydensity=1)
 		BYTE XThumbnail;	//缩略图的水平像素
 		BYTE YThumbnail;	//虽略图的垂直像素
-		//sizeof(JFIFHeader::Info) == 16
+		//sizeof(JPEG_JFIFHeader::Info) == 16
 	};
 
 	WORD marker = Marker::APP0;		//起始标记
 	Info info;						//内容
 };
-
 
 struct JPEG_QTableHeader
 {
@@ -253,11 +282,11 @@ struct JPEG_QTable_8BitPrec {
 	BYTE qtable_8bit[8][8];
 };
 
-
 struct JPEG_QTable_16BitPrec {
 	JPEG_QTableHeader header;
 	WORD qtable_16bit[8][8];
 };
+
 
 struct JPEG_FrameHeader_BDCT_YCbCr
 {
@@ -284,14 +313,19 @@ struct JPEG_FrameHeader_BDCT_YCbCr
 				CHROMA_B,
 				CHROMA_R
 			}identifier; //分量ID, YCbCr 3分量情况下, 1对应Y, 2对应Cb, 3对应Cr
-			BYTE VSubsampFact : 4;	//低4位 垂直采样因子
-			BYTE HSubsampFact : 4;	//高4位 水平采样因子
+			union {
+				BYTE _subsampFact;
+				BYTE VSubsampFact : 4;	//低4位 垂直采样因子
+				BYTE HSubsampFact : 4;	//高4位 水平采样因子
+			};
 			BYTE qtableID;			//量化表ID
 		} components[COMPCNT_YUV];			//YCbCr恒有3分量
 	};
 	const WORD marker = Marker::BASELINE_DCT;	//DCT类型标记
 	Info info;									//内容
 };
+
+
 
 struct JPEG_HTableHeader
 {
@@ -367,6 +401,16 @@ struct JPEG_File_BDCT_2Q4H
 	JPEG_Frame_BDCT_2Q4H frame;
 	const WORD EOFmarker = Marker::EOI;
 };
+
+using Block = BYTE[BLOCK_ROWCNT][BLOCK_COLCNT];
+
+struct MCU {
+	Block** y;
+	Block* cb;
+	Block* cr;
+};
+
+
 
 #pragma pack(pop)
 

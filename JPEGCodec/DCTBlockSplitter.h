@@ -6,8 +6,8 @@
 class DCTBlockSplitter
 {
 private:
-	static constexpr int dctblock_colcnt = DCTBLOCK_COLCNT;
-	static constexpr int dctblock_rowcnt = DCTBLOCK_ROWCNT;
+	static constexpr int dctblock_colcnt = BLOCK_COLCNT;
+	static constexpr int dctblock_rowcnt = BLOCK_ROWCNT;
 	Matrix<float>* matrix_y;
 	Matrix<float>* matrix_cb;
 	Matrix<float>* matrix_cr;

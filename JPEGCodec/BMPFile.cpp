@@ -3,7 +3,6 @@
 * Written by kiminouso, 2023/04/05
 */
 #include "BMPFile.h"
-#include <thread>
 
 DWORD BMPFile::_getRowSize(LONG width, WORD bitCount) {
 	return ((((width * bitCount) + 31) & ~31) >> 3);
@@ -18,12 +17,9 @@ bool BMPFile::_testLegality() {
 	return isOK;
 }
 
-
-
+[[deprecated]]
 bool BMPFile::_readRGB(Matrix<RGBTriple>* rgbMatrix, LONG ypos_start, LONG ypos_end)
 {
-	FILE* hFile;
-	hFile = fopen(_filepath, "rb");
 	if (fseek(hFile, _fileHeader.bfOffBits + ypos_start*_rowSize, SEEK_SET) != 0) {
 		return false;
 	}
@@ -39,7 +35,6 @@ bool BMPFile::_readRGB(Matrix<RGBTriple>* rgbMatrix, LONG ypos_start, LONG ypos_
 		}
 		fseek(hFile, _extraByteCnt, SEEK_CUR); //跳过为补齐4字节而多出的字节
 	}
-	fclose(hFile);
 	return isOK;
 }
 
@@ -48,9 +43,7 @@ WORD BMPFile::getBitCount() {
 }
 
 bool BMPFile::load(const char* filepath) {
-	FILE* hFile;
-	_filepath = (char*)filepath;
-	hFile = fopen(_filepath, "rb");
+	hFile = fopen(filepath, "rb");
 	if (hFile == NULL) {
 		return false;
 	}
@@ -65,7 +58,6 @@ bool BMPFile::load(const char* filepath) {
 		_extraByteCnt = _rowSize - _infoHeader.biWidth * (_infoHeader.biBitCount / 8);
 		isOK = _testLegality();
 	}
-	fclose(hFile);
 	return isOK;
 }
 
@@ -78,8 +70,6 @@ LONG BMPFile::height() {
 }
 
 bool BMPFile::readRGB(Matrix<RGBTriple>* rgbMatrix) {
-	FILE* hFile;
-	hFile = fopen(_filepath, "rb");
 	if (fseek(hFile, _fileHeader.bfOffBits, SEEK_SET) != 0) {
 		return false;
 	}
@@ -93,14 +83,11 @@ bool BMPFile::readRGB(Matrix<RGBTriple>* rgbMatrix) {
 			return false;
 		}
 	}
-	fclose(hFile);
 	return isOK;
 }
 
 bool BMPFile::readRGB(Matrix<RGBQuad>* rgbMatrix)
 {
-	FILE* hFile;
-	hFile = fopen(_filepath, "rb");
 	if (fseek(hFile, _fileHeader.bfOffBits , SEEK_SET) != 0) {
 		return false;
 	}
@@ -113,14 +100,12 @@ bool BMPFile::readRGB(Matrix<RGBQuad>* rgbMatrix)
 			return false;
 		}
 	}
-	fclose(hFile);
 	return isOK;
 }
 
+[[deprecated]]
 bool BMPFile::readRGB(Matrix<RGBQuad>* rgbMatrix, LONG y_start, LONG y_end)
 {
-	FILE* hFile;
-	hFile = fopen(_filepath, "rb");
 	if (fseek(hFile, _fileHeader.bfOffBits + y_start * _rowSize, SEEK_SET) != 0) {
 		return false;
 	}
@@ -133,14 +118,12 @@ bool BMPFile::readRGB(Matrix<RGBQuad>* rgbMatrix, LONG y_start, LONG y_end)
 			return false;
 		}
 	}
-	fclose(hFile);
 	return isOK;
 }
 
+[[deprecated]]
 bool BMPFile::readRGB(Matrix<RGBTriple>* rgbMatrix, LONG y_start, LONG y_end)
 {
-	FILE* hFile;
-	hFile = fopen(_filepath, "rb");
 	if (fseek(hFile, _fileHeader.bfOffBits + y_start * _rowSize, SEEK_SET) != 0) {
 		return false;
 	}
@@ -154,6 +137,5 @@ bool BMPFile::readRGB(Matrix<RGBTriple>* rgbMatrix, LONG y_start, LONG y_end)
 			return false;
 		}
 	}
-	fclose(hFile);
 	return isOK;
 }

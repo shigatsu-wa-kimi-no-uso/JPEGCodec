@@ -11,7 +11,7 @@
 class BMPFile
 {
 private:
-	char* _filepath;
+	FILE* hFile;
 	BitmapFileHeader _fileHeader;
 	BitmapInfoHeader _infoHeader;
 	DWORD _rowSize;
@@ -20,7 +20,6 @@ private:
 	DWORD _getRowSize(LONG width, WORD bitCount);
 	bool _testLegality();
 	bool _readRGB(Matrix<RGBTriple>* rgbMatrix, LONG ypos_start, LONG ypos_end);
-
 public:
 	WORD getBitCount();
 	bool load(const char* filepath);
@@ -28,7 +27,11 @@ public:
 	LONG height();
 	bool readRGB(Matrix<RGBTriple>* rgbMatrix);
 	bool readRGB(Matrix<RGBQuad>* rgbMatrix);
+
+	[[deprecated]]
 	bool readRGB(Matrix<RGBQuad>* rgbMatrix, LONG y_start, LONG y_end);
+
+	[[deprecated]]
 	bool readRGB(Matrix<RGBTriple>* rgbMatrix,LONG y_start,LONG y_end);
 };
 
