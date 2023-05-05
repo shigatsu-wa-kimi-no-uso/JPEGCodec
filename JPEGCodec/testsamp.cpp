@@ -10,7 +10,10 @@
 #include <thread>
 #include <mutex>
 #include <semaphore>
-
+#include "ByteHuffman.h"
+#include <iomanip>
+#include <bitset>
+#include "CodingUtil.h"
 const char* getoptarg(int argc,char** argv,const char* opt) {
     
     for (int i = 0; i < argc - 1; ++i) {
@@ -240,12 +243,78 @@ bool initialize(int argc, char** argv) {
     }
 }
 
-int main(int argc, char** argv) {
+
+void print(ByteHuffman::Table* tables, int count,size_t freqs[]) {
+
+	std::cout << std::left << std::setw(tables[count-1].bits.length()+3) << "bits" << std::left << std::setw(10) << "val" << std::left << std::setw(10) << "freq" << "\n";
+	for (int i = 0; i < count; ++i) {
+		std::cout << std::left << std::setw(tables[count - 1].bits.length()+3) <<tables[i].bits << std::left << std::setw(10) << tables[i].val << std::left << std::setw(10) << freqs[tables[i].val] << "\n";
+	}
+
+}
+
+int main() {
+
+}
+
+int main99(int argc, char** argv) {
+	/*DWORD zigzag[8][8] = {
+		0,1,5,6,14,15,27,28,
+		2,4,7,13,16,26,29,42,
+		3,8,12,17,25,30,41,43,
+		9,11,18,24,31,40,44,53,
+		10,19,23,32,39,45,52,54,
+		20,22,33,38,46,51,55,60,
+		21,34,37,47,50,56,59,61,
+		35,36,48,49,57,58,62,63
+	};
+    Block block;
+    int zigzagged[64]{ 35,7,0,0,0,-6,-2,0,0,-9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,0,0 };
+    for (int r=0;r<8;++r){
+        for (int c = 0; c < 8; c++) {
+            block[r][c] = zigzagged[zigzag[r][c]];
+            printf("%2.0f ", block[r][c]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+    int codes[64];
+    RLE::getRLECodes(&block, codes);
+    for (int i = 0; i < 32; i+=2) {
+        if (codes[i] == 0 && codes[i + 1] == 0) {
+            printf("(EOB)");
+            break;
+        } else {
+            printf("(%d,%d)", codes[i], codes[i + 1]);
+        }
+
+    }
+    printf("\n");*/
+    
+    ByteHuffman bh;
+	char a[] = "The encoding procedure is defined in terms of a set of extended tables, XHUFCO and XHUFSI, which contain the "
+		"complete set of Huffman codes and sizes for all possible difference values.For full 12 - bit precision the tables are relatively "
+		"large.For the baseline system, however, the precision of the differences may be small enough to make this description "
+		"practical";
+    size_t freq[256] = { 0 };
+    ByteHuffman::Table* tables = new ByteHuffman::Table[256];
+    for (int i = 0; i < 365; ++i) {
+        freq[a[i]]++;
+    }
+    int count;
+    bh.setFrequencyMap(&freq);
+    bh.buildTree();
+	bh.getTable(tables, count);
+	print(tables, count, freq);
+    bh.getCanonicalTable(tables, count);
+    print(tables, count, freq);
+    /*
     CodingUnits units;
     initialize(argc, argv);
     ColorSpaceConverter csc;
     Matrix<YCbCr> ycbcrMat = Matrix<YCbCr>(bmpFile.height(), bmpFile.width());
-    units.makeMCUs(&ycbcrMat, subsampFact);
+    units.makeMCUs(&ycbcrMat, subsampFact);  */
+    return 0;
 }
 
 int main3(int argc, char** argv)

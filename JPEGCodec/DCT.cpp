@@ -13,7 +13,7 @@ void DCT::setBlocks(Matrix<float>* dctblocks, DWORD blockCnt) {
 	_blockCnt = blockCnt;
 }
 
-void DCT::tramsform(Matrix<float>* outputBlocks) {
+void DCT::transform(Matrix<float>* outputBlocks) {
 	for (DWORD i = 0; i < _blockCnt; ++i) {
 		for (int u = 0; u < 8; ++u) {
 			for (int v = 0; v < 8; ++v) {
@@ -33,4 +33,19 @@ void DCT::tramsform(Matrix<float>* outputBlocks) {
 		}
 	}
 
+}
+
+void DCT::transform(Block* input, Block* output)
+{
+	for (int u = 0; u < BLOCK_ROWCNT; ++u) {
+		for (int v = 0; v < BLOCK_COLCNT; ++v) {
+			float t = 0;
+			for (int x = 0; x < BLOCK_ROWCNT; ++x) {
+				for (int y = 0; y < BLOCK_COLCNT; ++y) {
+					t += input[0][x][y] * _get_coeff(u, v, x, y);
+				}
+			}
+			output[0][u][v] = t;
+		}
+	}
 }

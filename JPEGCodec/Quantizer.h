@@ -13,8 +13,6 @@ private:
 
 	static DWORD _std_qtable_C[8][8];
 
-	static DWORD _zigzag[8][8];
-
 	Matrix<float>* _blocks;
 
 	DWORD _blockCnt;
@@ -26,12 +24,12 @@ public:
 		_blocks = blocks;
 		_blockCnt = blockCnt;
 	}
-	enum Mode{
+	enum QTable{
 		STD_QTABLE_LUMA,
 		STD_QTABLE_CHROMA
 	};
 
-	void setQTable(Mode mode) {
+	void setQTable(QTable mode) {
 		switch (mode)
 		{
 		case STD_QTABLE_LUMA:
@@ -41,12 +39,28 @@ public:
 			_qtable = _std_qtable_C;
 		}
 	}
+	static void quantize(Block* input,Block* output,QTable qtableType) {
+		static DWORD (*qtable)[8];
+		switch (qtableType)
+		{
+		case STD_QTABLE_LUMA:
+			qtable = _std_qtable_Y;
+			break;
+		case STD_QTABLE_CHROMA:
+			qtable = _std_qtable_C;
+		}
 
-	void quantize(Matrix<DWORD>* outputSequence) {
+		for (int r = 0; r < BLOCK_ROWCNT; ++r) {
+			for (int c = 0; c < BLOCK_COLCNT; ++c) {
+				(*output)[r][c] = myround((*input)[r][c] / qtable[r][c]);
+			}
+		}
+	}
+	void quantize(Matrix<float>* outputSequence) {
 		for (int i = 0; i < _blockCnt; ++i) {
 			for (int x = 0; x < 8; ++x) {
 				for (int y = 0; y < 8; ++y) {
-					outputSequence[i][x][y] = (DWORD)std::round(_blocks[i][x][y] / _qtable[x][y]);
+					outputSequence[i][x][y] = myround(_blocks[i][x][y] / _qtable[x][y]);
 				}
 			}
 		}

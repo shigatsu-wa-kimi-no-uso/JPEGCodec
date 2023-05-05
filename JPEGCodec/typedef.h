@@ -4,10 +4,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <type_traits>
 #include <winsock.h>
-#define proc do
-#define endproc while(false)
-
-#define test(expr) if(expr) break
+#include "BitString.h"
+#define DEBUG
 
 
 using WORD = unsigned short;
@@ -402,7 +400,7 @@ struct JPEG_File_BDCT_2Q4H
 	const WORD EOFmarker = Marker::EOI;
 };
 
-using Block = BYTE[BLOCK_ROWCNT][BLOCK_COLCNT];
+using Block = float[BLOCK_ROWCNT][BLOCK_COLCNT];
 
 struct MCU {
 	Block** y;
@@ -410,6 +408,10 @@ struct MCU {
 	Block* cr;
 };
 
+struct RLECode {
+	int zeroCnt;
+	int value;
+};
 
 
 #pragma pack(pop)

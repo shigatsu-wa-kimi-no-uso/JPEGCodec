@@ -44,11 +44,13 @@ private:
 
 	Matrix<float>* _dctblocks;
 	DWORD _blockCnt;
-	float _get_coeff(int u, int v, int x, int y);
+	static float _get_coeff(int u, int v, int x, int y);
 	float _shift128(float val);
+
 public:
 	void setBlocks(Matrix<float>* dctblocks, DWORD blockCnt);
-	void tramsform(Matrix<float>* outputBlocks);
+	void transform(Matrix<float>* outputBlocks);
+	static void transform(Block* input, Block* output);
 };
 
 

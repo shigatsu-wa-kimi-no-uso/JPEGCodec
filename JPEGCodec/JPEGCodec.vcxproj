@@ -146,6 +146,7 @@
     <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BitString.h" />
     <ClInclude Include="BMPFile.h" />
     <ClInclude Include="CodingUnits.h" />
     <ClInclude Include="CodingUtil.h" />
@@ -153,12 +154,11 @@
     <ClInclude Include="DCTBlockSplitter.h" />
     <ClInclude Include="ColorSpaceConverter.h" />
     <ClInclude Include="Downsampler.h" />
+    <ClInclude Include="Heap.h" />
+    <ClInclude Include="ByteHuffman.h" />
     <ClInclude Include="JPEGEncoder.h" />
     <ClInclude Include="Quantizer.h" />
     <ClInclude Include="typedef.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="JPEGCodec.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -6,9 +6,20 @@
 #ifndef CodingUnits_h__
 #define CodingUnits_h__
 #include "typedef.h"
+#include "Quantizer.h"
+#include "CodingUtil.h"
+#include "DCT.h"
 
 class CodingUnits {
 private:
+	struct BitCode {
+		union {
+			BYTE bitLength : 4;
+			BYTE zeroCnt : 4;
+			BYTE codedUnit;
+		};
+		DWORD bits;
+	};
 	SubsampFact _subsampFact;
 	Matrix<MCU>* _MCUs;
 	void _makeBoundaryMCU(Matrix<YCbCr>* ycbcrData, MCU* mcu, int pos_x, int pos_y) {
@@ -18,9 +29,9 @@ private:
 		int col_cnt = BLOCK_COLCNT * stride_c;
 		int imgbound_col = ycbcrData->column_cnt;
 		int imgbound_row = ycbcrData->row_cnt;
-		mcu->y = new Block * [stride_r];
-		for (int i = 0; i < stride_r; ++i) {
-			mcu->y[i] = new Block[stride_c];
+		mcu->y = new Block * [stride_r * stride_c];
+		for (int i = 0; i < stride_r * stride_c; ++i) {
+			mcu->y[i] = new Block[1];
 		}
 		mcu->cb = new Block[1];
 		mcu->cr = new Block[1];
@@ -30,11 +41,10 @@ private:
 			for (int c = 0; c < col_cnt; ++c) {
 				int imgpos_y = pos_y + r >= imgbound_col ? imgbound_col - 1 : pos_y + r;
 				int imgpos_x = pos_x + c >= imgbound_row ? imgbound_row - 1 : pos_x + c;
-				int y_blockSel_r = r / BLOCK_ROWCNT;
-				int y_blockSel_c = c / BLOCK_COLCNT;
+				int y_blockSel = stride_c * (r / BLOCK_ROWCNT) + c / BLOCK_ROWCNT;
 				int y_unitSel_r = r % BLOCK_ROWCNT;
 				int y_unitSel_c = c % BLOCK_COLCNT;
-				mcu->y[y_blockSel_r][y_blockSel_c][y_unitSel_c][y_unitSel_c] = ycbcrData[0][imgpos_y][imgpos_x].Y;
+				(*mcu->y[y_blockSel])[y_unitSel_c][y_unitSel_c] = (*ycbcrData)[imgpos_y][imgpos_x].Y;
 			}
 		}
 		//–¥»ÎCbCr
@@ -42,8 +52,8 @@ private:
 			for (int c = 0; c < col_cnt; c += stride_c) {
 				int imgpos_y = pos_y + r >= imgbound_col ? imgbound_col - 1 : pos_y + r;
 				int imgpos_x = pos_x + c >= imgbound_row ? imgbound_row - 1 : pos_x + c;
-				mcu->cb[0][r / stride_r][c / stride_c] = ycbcrData[0][imgpos_y][imgpos_x].Cb;
-				mcu->cr[0][r / stride_r][c / stride_c] = ycbcrData[0][imgpos_y][imgpos_x].Cr;
+				(*mcu->cb)[r / stride_r][c / stride_c] = (*ycbcrData)[imgpos_y][imgpos_x].Cb;
+				(*mcu->cr)[r / stride_r][c / stride_c] = (*ycbcrData)[imgpos_y][imgpos_x].Cr;
 			}
 		}
 	}
@@ -53,9 +63,9 @@ private:
 		int stride_c = _subsampFact.factor_h;
 		int row_cnt = BLOCK_ROWCNT * stride_r;
 		int col_cnt = BLOCK_COLCNT * stride_c;
-		mcu->y = new Block * [stride_r];
-		for (int i = 0; i < stride_r; ++i) {
-			mcu->y[i] = new Block[stride_c];
+		mcu->y = new Block*[stride_r * stride_c];
+		for (int i = 0; i < stride_r * stride_c; ++i) {
+			mcu->y[i] = new Block[1];
 		}
 		mcu->cb = new Block[1];
 		mcu->cr = new Block[1];
@@ -65,11 +75,10 @@ private:
 			for (int c = 0; c < col_cnt; ++c) {
 				int imgpos_y = pos_y + r;
 				int imgpos_x = pos_x + c;
-				int y_blockSel_r = r / BLOCK_ROWCNT;
-				int y_blockSel_c = c / BLOCK_COLCNT;
+				int y_blockSel = stride_c * (r / BLOCK_ROWCNT) + c / BLOCK_ROWCNT;
 				int y_unitSel_r = r % BLOCK_ROWCNT;
 				int y_unitSel_c = c % BLOCK_COLCNT;
-				mcu->y[y_blockSel_r][y_blockSel_c][y_unitSel_c][y_unitSel_c] = ycbcrData[0][imgpos_y][imgpos_x].Y;
+				(*mcu->y[y_blockSel])[y_unitSel_c][y_unitSel_c] = (*ycbcrData)[imgpos_y][imgpos_x].Y;
 			}
 		}
 		//–¥»ÎCbCr
@@ -77,12 +86,49 @@ private:
 			for (int c = 0; c < col_cnt; c+=stride_c) {
 				int imgpos_y = pos_y + r;
 				int imgpos_x = pos_x + c;
-				mcu->cb[0][r / stride_r][c / stride_c] = ycbcrData[0][imgpos_y][imgpos_x].Cb;
-				mcu->cr[0][r / stride_r][c / stride_c] = ycbcrData[0][imgpos_y][imgpos_x].Cr;
+				(*mcu->cb)[r / stride_r][c / stride_c] = (*ycbcrData)[imgpos_y][imgpos_x].Cb;
+				(*mcu->cr)[r / stride_r][c / stride_c] = (*ycbcrData)[imgpos_y][imgpos_x].Cr;
 			}
 		}
 	}
 
+	void _updateMCU(MCU* newMCU, int r, int c) {
+		MCU* mcu = &(*_MCUs)[r][c];
+		for (int i = 0; i < _subsampFact.factor_v; ++i) {
+			for (int j = 0; j < _subsampFact.factor_h; ++j) {
+				delete[] mcu->y[i * _subsampFact.factor_h + j];
+				mcu->y[i * _subsampFact.factor_h + j] = newMCU->y[i * _subsampFact.factor_h + j];
+			}
+		}
+		delete[] mcu->cb;
+		delete[] mcu->cr;
+		mcu->cb = newMCU->cb;
+		mcu->cr = newMCU->cr;
+	}
+
+	void _lshift128(Block* block) {
+		for (int r = 0; r < BLOCK_ROWCNT; ++r) {
+			for (int c = 0; c < BLOCK_COLCNT; ++c) {
+				(*block)[r][c] -= 128;
+			}
+		}
+	}
+
+	void _bitEncodeOneBlock(Block* input, BitCode* outputBuf) {
+		RLECode RLEcodeBuf[256];
+		int DCDiff = DPCM::nextDiff((*input)[0][0]);
+		RLEcodeBuf[0].zeroCnt = 0;
+		RLEcodeBuf[0].value = DCDiff;
+		int count;
+		RLE::getRLECodes(input, &RLEcodeBuf[1], &count);
+		count++;
+		for (int i = 0; i < count; ++i) {
+			BitString bitString = BitEncoder::getBitString(RLEcodeBuf[i].value);
+			outputBuf[i].zeroCnt = RLEcodeBuf[i].zeroCnt;
+			outputBuf[i].bits = bitString.value();
+			outputBuf[i].bitLength = bitString.length();
+		}
+	}
 public:
 	CodingUnits() {}
 	/*
@@ -119,6 +165,89 @@ public:
 		for (c = 0; c < mcus_col; ++c) {
 			_makeBoundaryMCU(ycbcrData, &(*_MCUs)[r][c], c * mcu_colUnitCnt, r * mcu_rowUnitCnt);
 		}
+	}
+
+	void doFDCT() {
+		for (int r = 0; _MCUs->row_cnt; ++r) {
+			for (int c = 0; _MCUs->column_cnt; ++c) {
+				MCU* mcu = _MCUs[r][c];
+				MCU* newMCU = new MCU;
+				Block* input;
+				Block* output;
+				for (int i = 0; i < _subsampFact.factor_v; ++i) {
+					for (int j = 0; j < _subsampFact.factor_h; ++j) {
+						input = mcu->y[i * _subsampFact.factor_h + j];
+						_lshift128(input);
+						output = new Block[1];
+						DCT::transform(input, output);
+						newMCU->y[i * _subsampFact.factor_h + j] = output;
+					}
+				}
+				input = mcu->cb;
+				_lshift128(input);
+				output = new Block[1];
+				DCT::transform(input, output);
+				newMCU->cb = output;
+				input = mcu->cr;
+				_lshift128(input);
+				output = new Block[1];
+				DCT::transform(input, output);
+				newMCU->cr = output;
+				_updateMCU(newMCU, r, c);
+			}
+		}
+	}
+
+	void doQuantize() {
+		for (int r = 0; _MCUs->row_cnt; ++r) {
+			for (int c = 0; _MCUs->column_cnt; ++c) {
+				MCU* mcu = _MCUs[r][c];
+				Block* input;
+				Block* output;
+				for (int i = 0; i < _subsampFact.factor_v; ++i) {
+					for (int j = 0; j < _subsampFact.factor_h; ++j) {
+						input = mcu->y[i * _subsampFact.factor_h + j];
+						output = input;
+						Quantizer::quantize(input, output, Quantizer::STD_QTABLE_LUMA);
+					}
+				}
+				input = mcu->cb;
+				output = input;
+				Quantizer::quantize(input, output, Quantizer::STD_QTABLE_CHROMA);
+				input = mcu->cr;
+				output = input;
+				Quantizer::quantize(input, output, Quantizer::STD_QTABLE_CHROMA);
+			}
+		}
+	}
+
+
+
+	void _bitEncode(BitCode**** bitCodeBuf) {
+		for (int r = 0; _MCUs->row_cnt; ++r) {
+			for (int c = 0; _MCUs->column_cnt; ++c) {
+				MCU* mcu = _MCUs[r][c];
+				Block* input;
+				Block* output;
+				int i,j;
+				for (i = 0; i < _subsampFact.factor_v; ++i) {
+					for (j = 0; j < _subsampFact.factor_h; ++j) {
+						input = mcu->y[i * _subsampFact.factor_h + j];
+						_bitEncodeOneBlock(input, bitCodeBuf[r][c][i * _subsampFact.factor_h + j]);
+					}
+				}
+				input = mcu->cb;
+				output = input;
+				_bitEncodeOneBlock(input, bitCodeBuf[r][c][i * j]);
+				input = mcu->cr;
+				output = input;
+				_bitEncodeOneBlock(input, bitCodeBuf[r][c][i * j + 1]);
+			}
+		}
+	}
+
+	void huffmanEncode() {
+
 	}
 
 	Matrix<MCU>* getMCUs() {

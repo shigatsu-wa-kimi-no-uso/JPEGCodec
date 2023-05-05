@@ -80,10 +80,14 @@
     <ClInclude Include="JPEGEncoder.h">
       <Filter>头文件</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="JPEGCodec.rc">
-      <Filter>资源文件</Filter>
-    </ResourceCompile>
+    <ClInclude Include="Heap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ByteHuffman.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="BitString.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
