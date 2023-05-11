@@ -134,13 +134,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="BMPFile.cpp" />
-    <ClCompile Include="CodingUnits.cpp" />
+    <ClCompile Include="Main.cpp" />
     <ClCompile Include="CodingUtil.cpp" />
     <ClCompile Include="DCT.cpp" />
     <ClCompile Include="DCTBlockSplitter.cpp" />
     <ClCompile Include="ColorSpaceConverter.cpp" />
     <ClCompile Include="Downsampler.cpp" />
-    <ClCompile Include="JPEGEncoder.cpp" />
     <ClCompile Include="testsamp.cpp" />
     <ClCompile Include="Quantizer.cpp" />
     <ClCompile Include="test.cpp" />
@@ -148,17 +147,17 @@
   <ItemGroup>
     <ClInclude Include="BitString.h" />
     <ClInclude Include="BMPFile.h" />
-    <ClInclude Include="CodingUnits.h" />
+    <ClInclude Include="Encoder.h" />
     <ClInclude Include="CodingUtil.h" />
     <ClInclude Include="DCT.h" />
     <ClInclude Include="DCTBlockSplitter.h" />
     <ClInclude Include="ColorSpaceConverter.h" />
     <ClInclude Include="Downsampler.h" />
     <ClInclude Include="Heap.h" />
-    <ClInclude Include="ByteHuffman.h" />
-    <ClInclude Include="JPEGEncoder.h" />
+    <ClInclude Include="IntHuffman.h" />
     <ClInclude Include="Quantizer.h" />
     <ClInclude Include="typedef.h" />
+    <ClInclude Include="UtilFunc.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

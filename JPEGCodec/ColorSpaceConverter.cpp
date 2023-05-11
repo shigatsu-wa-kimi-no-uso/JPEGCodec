@@ -3,6 +3,7 @@
 * Written by kiminouso, 2023/04/05
 */
 #include "ColorSpaceConverter.h"
+#include "UtilFunc.h"
 
 float ColorSpaceConverter::_luma(const RGBTriple* rgb) {
 	float y = 0.299 * rgb->rgbRed + 0.587 * rgb->rgbGreen + 0.114 * rgb->rgbBlue;

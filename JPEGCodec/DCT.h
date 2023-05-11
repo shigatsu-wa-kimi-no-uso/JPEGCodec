@@ -50,7 +50,7 @@ private:
 public:
 	void setBlocks(Matrix<float>* dctblocks, DWORD blockCnt);
 	void transform(Matrix<float>* outputBlocks);
-	static void transform(Block* input, Block* output);
+	static void forwardDCT(Block* input, Block* output);
 };
 
 

@@ -13,30 +13,7 @@ using DWORD = unsigned long;
 using LONG = long;
 using BYTE = unsigned char;
 
-inline DWORD big_endian(DWORD val) {
-	return htonl(val);
-}
 
-inline WORD big_endian(WORD val) {
-	return htons(val);
-}
-
-inline DWORD host_order(DWORD val) {
-	return ntohl(val);
-}
-
-inline WORD host_order(WORD val) {
-	return ntohs(val);
-}
-
-inline int myround(float val) {
-	int intval = val;
-	if (val - intval >= 0.5f) {
-		return intval + 1;
-	} else {
-		return intval;
-	}
-}
 
 #pragma pack(push,1)	//设置结构体为1字节对齐
 

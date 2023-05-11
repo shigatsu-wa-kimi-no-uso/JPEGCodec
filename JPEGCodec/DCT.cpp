@@ -35,7 +35,7 @@ void DCT::transform(Matrix<float>* outputBlocks) {
 
 }
 
-void DCT::transform(Block* input, Block* output)
+void DCT::forwardDCT(Block* input, Block* output)
 {
 	for (int u = 0; u < BLOCK_ROWCNT; ++u) {
 		for (int v = 0; v < BLOCK_COLCNT; ++v) {

@@ -6,33 +6,15 @@
 #include "BMPFile.h"
 #include "Downsampler.h"
 #include "Windows.h"
-#include "CodingUnits.h"
+#include "Encoder.h"
 #include <thread>
 #include <mutex>
 #include <semaphore>
-#include "ByteHuffman.h"
+#include "IntHuffman.h"
 #include <iomanip>
 #include <bitset>
 #include "CodingUtil.h"
-const char* getoptarg(int argc,char** argv,const char* opt) {
-    
-    for (int i = 0; i < argc - 1; ++i) {
-        if (strcmp(argv[i], opt) == 0) {
-            return argv[i + 1];
-        }
-    }
-    return nullptr;
-}
-
-bool testopt(int argc, char** argv, const char* opt) {
-    for (int i = 0; i < argc; ++i) {
-        if (strcmp(argv[i], opt) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
+#include "UtilFunc.h"
 
 using Integer = int*;
 using ref_Integer = Integer&;
@@ -244,20 +226,38 @@ bool initialize(int argc, char** argv) {
 }
 
 
-void print(ByteHuffman::Table* tables, int count,size_t freqs[]) {
-
-	std::cout << std::left << std::setw(tables[count-1].bits.length()+3) << "bits" << std::left << std::setw(10) << "val" << std::left << std::setw(10) << "freq" << "\n";
-	for (int i = 0; i < count; ++i) {
-		std::cout << std::left << std::setw(tables[count - 1].bits.length()+3) <<tables[i].bits << std::left << std::setw(10) << tables[i].val << std::left << std::setw(10) << freqs[tables[i].val] << "\n";
+void print(std::vector<IntHuffman::CanonicalTableEntry>& table,size_t freqs[]) {
+    int width = table.back().codeLength + 3;
+	std::cout << std::left << std::setw(width) << "len" << std::left << std::setw(10) << "val" << std::left << std::setw(10) << "freq" << "\n";
+	for (IntHuffman::CanonicalTableEntry& entry:table) {
+		std::cout << std::left << std::setw(width) <<entry.codeLength << std::left << std::setw(10) << entry.val << std::left << std::setw(10) << freqs[entry.val] << "\n";
 	}
-
 }
 
-int main() {
-
+void print(std::vector<IntHuffman::TableEntry>& table, size_t freqs[]) {
+	int width = table.back().bits.length() + 3;
+	std::cout << std::left << std::setw(width) << "bits" << std::left << std::setw(10) << "val" << std::left << std::setw(10) << "freq" << "\n";
+	for (IntHuffman::TableEntry& entry : table) {
+		std::cout << std::left << std::setw(width) << entry.bits << std::left << std::setw(10) << entry.val << std::left << std::setw(10) << freqs[entry.val] << "\n";
+	}
 }
 
-int main99(int argc, char** argv) {
+
+void print(std::vector<BitString>& bs, std::vector<IntHuffman::CanonicalTableEntry>& table, size_t freqs[]) {
+    int width = bs.back().length() + 3;
+    std::cout << std::left << std::setw(width) << "bits" << std::left << std::setw(10) << "val" << std::left << std::setw(10) << "freq" << "\n";
+    int i = 0;
+    for (BitString& b : bs) {
+        std::cout << std::left << std::setw(width) << b << std::left << std::setw(10) << table[i].val << std::left << std::setw(10) << freqs[table[i].val] << "\n";
+        i++;
+    }
+}
+
+int main0() {
+    return 0;
+}
+
+int main(int argc, char** argv) {
 	/*DWORD zigzag[8][8] = {
 		0,1,5,6,14,15,27,28,
 		2,4,7,13,16,26,29,42,
@@ -291,23 +291,31 @@ int main99(int argc, char** argv) {
     }
     printf("\n");*/
     
-    ByteHuffman bh;
+    IntHuffman bh;
 	char a[] = "The encoding procedure is defined in terms of a set of extended tables, XHUFCO and XHUFSI, which contain the "
 		"complete set of Huffman codes and sizes for all possible difference values.For full 12 - bit precision the tables are relatively "
 		"large.For the baseline system, however, the precision of the differences may be small enough to make this description "
 		"practical";
     size_t freq[256] = { 0 };
-    ByteHuffman::Table* tables = new ByteHuffman::Table[256];
+    std::vector<IntHuffman::CanonicalTableEntry> table;
+    std::vector<IntHuffman::TableEntry> table2;
+    std::vector<int> lengthCnt;
     for (int i = 0; i < 365; ++i) {
         freq[a[i]]++;
     }
-    int count;
     bh.setFrequencyMap(&freq);
     bh.buildTree();
-	bh.getTable(tables, count);
-	print(tables, count, freq);
-    bh.getCanonicalTable(tables, count);
-    print(tables, count, freq);
+    bh.getTable(table2);
+    print(table2, freq);
+    bh.getCanonicalTable(table);
+    bh.getCanonicalTable(lengthCnt,7);
+    print(table, freq);
+    std::vector<BitString> bs,bs2;
+    bh.getCanonicalCodes(table, bs);
+    print(bs, table, freq);
+    bh.getCanonicalCodes(lengthCnt, bs2);
+    bs2.erase(bs2.begin());
+    print(bs2, table, freq);
     /*
     CodingUnits units;
     initialize(argc, argv);

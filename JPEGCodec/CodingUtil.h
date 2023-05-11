@@ -23,8 +23,6 @@ public:
 	}
 };
 
-
-
 class RLE {
 private:
 	static DWORD _zigzag[8][8];
