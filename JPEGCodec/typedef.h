@@ -5,19 +5,31 @@
 #include <type_traits>
 #include <winsock.h>
 #include "BitString.h"
+
+#define MACROS
+#define ALIAS
+#define STRUCTS
 #define DEBUG
 
 
+#ifdef MACROS
+#define BLOCK_COLCNT 8
+#define BLOCK_ROWCNT 8
+#define HUFFMAN_CODE_LENGTH_LIMIT 16
+#define ALIGN(val,alignment_index)  (((val)+((1<<alignment_index) - 1)) & (~((1<<alignment_index) - 1)))
+#endif
+
+#ifdef ALIAS
 using WORD = unsigned short;
 using DWORD = unsigned long;
 using LONG = long;
 using BYTE = unsigned char;
+using Block = float[BLOCK_ROWCNT][BLOCK_COLCNT];
+#endif
 
-
+#ifdef STRUCTS
 
 #pragma pack(push,1)	//设置结构体为1字节对齐
-
-
 
 union SubsampFact{
 	enum : BYTE {
@@ -154,9 +166,7 @@ struct YCbCr
 	BYTE Cr;
 };
 
-#define BLOCK_COLCNT 8
-#define BLOCK_ROWCNT 8
-#define ALIGN(val,alignment_index)  (((val)+((1<<alignment_index) - 1)) & (~((1<<alignment_index) - 1)))
+
 
 struct Marker 
 {
@@ -377,7 +387,6 @@ struct JPEG_File_BDCT_2Q4H
 	const WORD EOFmarker = Marker::EOI;
 };
 
-using Block = float[BLOCK_ROWCNT][BLOCK_COLCNT];
 
 struct MCU {
 	Block** y;
@@ -390,6 +399,7 @@ struct RLECode {
 	int value;
 };
 
+#endif
 
 #pragma pack(pop)
 

@@ -303,17 +303,20 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 365; ++i) {
         freq[a[i]]++;
     }
-    bh.setFrequencyMap(&freq);
+    bh.setFrequencyMap(freq,256);
     bh.buildTree();
     bh.getTable(table2);
     print(table2, freq);
     bh.getCanonicalTable(table);
-    bh.getCanonicalTable(lengthCnt,7);
+    bh.getLengthCountTable(lengthCnt,7);
     print(table, freq);
     std::vector<BitString> bs,bs2;
+    std::vector<std::vector<DWORD>> t;
+    std::vector<std::vector<BitString>> bt;
     bh.getCanonicalCodes(table, bs);
     print(bs, table, freq);
-    bh.getCanonicalCodes(lengthCnt, bs2);
+    bh.getCanonicalTable(lengthCnt, t);
+    bh.getCanonicalCodes(t, bt);
     bs2.erase(bs2.begin());
     print(bs2, table, freq);
     /*

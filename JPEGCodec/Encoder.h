@@ -5,16 +5,44 @@
 */
 #ifndef CodingUnits_h__
 #define CodingUnits_h__
+#include <vector>
 #include "typedef.h"
 #include "Quantizer.h"
 #include "CodingUtil.h"
 #include "DCT.h"
 #include "IntHuffman.h"
-#include <vector>
+#include "BitWriter.h"
 
 class Encoder {
 private:
-	
+	class SymbolTable {
+	private:
+		size_t* _freqMap;
+		BitString* _codeMap;
+		int _count;
+	public:
+		SymbolTable(int entryCount):
+			_freqMap(new size_t[entryCount]{0}),
+			_codeMap(new BitString[entryCount]),
+			_count(entryCount){}
+		const int count() const {
+			return _count;
+		}
+		size_t& frequency(const int symbol) const {
+			return _freqMap[symbol];
+		}
+		BitString& code(const int symbol) const {
+			return _codeMap[symbol];
+		}
+		size_t* frequencyMapPtr() const {
+			return _freqMap;
+		}
+		~SymbolTable() {
+			delete[] _freqMap;
+			delete[] _codeMap;
+		}
+	};
+
 	struct BitCode {
 		union {
 			BYTE bitLength : 4;
@@ -23,11 +51,15 @@ private:
 		};
 		DWORD bits;
 	};
+
 	using BitCodeArray = std::vector<BitCode>;
+	using HuffmanTable = std::vector<std::vector<DWORD>>;
 
 	SubsampFact _subsampFact;
 
 	Matrix<MCU>* _MCUs;
+
+	HuffmanTable  _huffTable;
 
 	void _makeBoundaryMCU(Matrix<YCbCr>* ycbcrData, MCU* mcu, int pos_x, int pos_y) {
 		int stride_r = _subsampFact.factor_v;
@@ -139,26 +171,27 @@ private:
 		}
 	}
 
-	void _accumulateFrequency(const BitCodeArray& input, size_t(&freqMap)[256]) {
+	void _accumulateFrequency(const BitCodeArray& input,size_t* freqMapBuf) {
 		for (const BitCode& bitCode : input) {
-			freqMap[bitCode.codedUnit]++;
+			freqMapBuf[bitCode.codedUnit]++;
 		}
 	}
 
-	void _countFrequency(BitCodeArray const* const* const* bitCodes,size_t (&freqMap)[256]) {
-		memset(freqMap, 0, sizeof(freqMap));
+	void _countFrequency(BitCodeArray const* const* const* bitCodes,size_t * freqMapBuf) {
 		for (int r = 0; _MCUs->row_cnt; ++r) {
 			for (int c = 0; _MCUs->column_cnt; ++c) {
 				for (int i = 0; i < _subsampFact.factor_h * _subsampFact.factor_v + 2; ++i) {
-					_accumulateFrequency(bitCodes[r][c][i], freqMap);
+					_accumulateFrequency(bitCodes[r][c][i], freqMapBuf);
 				}
 			}
 		}
 	}
 
+
+	//先Y,再Cb,再Cr
+	//如果采样因子非1:1,则Y的块有多个,在一个MCU中从左往右从上到下遍历处理
 	void _bitEncodeOneMCU(MCU* mcu, BitCodeArray* bitCodeBuf) {
 		Block* input;
-		Block* output;
 		int i, j;
 		for (i = 0; i < _subsampFact.factor_v; ++i) {
 			for (j = 0; j < _subsampFact.factor_h; ++j) {
@@ -167,10 +200,8 @@ private:
 			}
 		}
 		input = mcu->cb;
-		output = input;
 		_bitEncodeOneBlock(input, bitCodeBuf[i * j]);
 		input = mcu->cr;
-		output = input;
 		_bitEncodeOneBlock(input, bitCodeBuf[i * j + 1]);
 	}
 
@@ -183,9 +214,41 @@ private:
 		}
 	}
 
+	void _getHuffmanCode(SymbolTable& symbolTable) {
+		IntHuffman huffmanUtil;
+		std::vector<int> codeLengthTable;
+		std::vector<std::vector<BitString>> bitStringTable;
+		huffmanUtil.setFrequencyMap(symbolTable.frequencyMapPtr(), 257);
+		huffmanUtil.buildTree();
+		huffmanUtil.getLengthCountTable(codeLengthTable, HUFFMAN_CODE_LENGTH_LIMIT);
+		huffmanUtil.getCanonicalTable(codeLengthTable, _huffTable);
+		huffmanUtil.getCanonicalCodes(_huffTable, bitStringTable);
+		int lengthCnt = bitStringTable.size();
+		for (int i = 1; i < lengthCnt; ++i) {
+			int sublistSize = bitStringTable[i].size();
+			for (int j = 0; j < sublistSize; ++j) {
+				symbolTable.code(_huffTable[i][j]) = bitStringTable[i][j];
+			}
+		}
+	}
+
+	void _huffmanEncodeOneBlock(const BitCodeArray& bitCodes, const SymbolTable& symbolTable, std::vector<BYTE>& output) {
+		BitWriter writer(output);
+		for (const BitCode& bitCode : bitCodes) {
+			writer.write(symbolTable.code(bitCode.codedUnit));
+			writer.write(bitCode.bits);
+		}
+	}
+
+	void _huffmanEncodeOneMCU(const BitCodeArray* bitCodes, const SymbolTable& symbolTable, std::vector<BYTE>& output) {
+		for (int i = 0; i < _subsampFact.factor_h * _subsampFact.factor_v + 2; ++i) {
+			_huffmanEncodeOneBlock(bitCodes[i], symbolTable,output);
+		}
+	}
+
+
 public:
 	Encoder() {}
-
 
 	/*
 	CodingUnits(int linecnt, int colcnt, SubsampFact _subsampFact)
@@ -203,7 +266,6 @@ public:
 			_mcus[i]->cb[0][2][1];
 		}
 	}*/
-
 
 	void makeMCUs(Matrix<YCbCr>* ycbcrData, SubsampFact subsampFact) {
 		_subsampFact = subsampFact;
@@ -280,23 +342,23 @@ public:
 
 	void encode() {
 		BitCodeArray*** bitCodes = new BitCodeArray**[_MCUs->row_cnt];
-		for (int r = 0; _MCUs->row_cnt; ++r) {
-			bitCodes[r] = new BitCodeArray*[_MCUs->column_cnt];
+		for (int r = 0; r < _MCUs->row_cnt; ++r) {
+			bitCodes[r] = new BitCodeArray * [_MCUs->column_cnt];
 		}
 		_bitEncode(bitCodes);
 
-		size_t freqMap[256];
-		_countFrequency(bitCodes, freqMap);
-		IntHuffman huffmanUtil;
-		huffmanUtil.setFrequencyMap(&freqMap);
-		huffmanUtil.buildTree();
-		std::vector<IntHuffman::CanonicalTableEntry> huffTable;
-		huffmanUtil.getCanonicalTable(huffTable);
+		SymbolTable symbolTable(257);
+		_countFrequency(bitCodes, symbolTable.frequencyMapPtr());
+		_getHuffmanCode(symbolTable);
+
 	}
 
-
-	void _huffmanEncode() {
-		
+	void _huffmanEncode(const BitCodeArray*** bitCodes, const SymbolTable& symbolTable, std::vector<BYTE>& output) {
+		for (int r = 0; _MCUs->row_cnt; ++r) {
+			for (int c = 0; _MCUs->column_cnt; ++c) {
+				_huffmanEncodeOneMCU(bitCodes[r][c], symbolTable, output);
+			}
+		}
 	}
 
 	Matrix<MCU>* getMCUs() {

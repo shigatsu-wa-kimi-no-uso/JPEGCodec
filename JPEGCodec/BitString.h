@@ -45,7 +45,6 @@ private:
 		return 0;
 	}
 public:
-
 	BitString():_bits(0),_length(0){}
 	BitString(const DWORD& val) :_bits(val), _length(_getMSBIndex(val)) {}
 	BitString(const BitString& val) :_bits(val._bits), _length(val._length) {}
@@ -92,6 +91,7 @@ public:
 	void setAll1() {
 		_bits = ~0;
 	}
+
 	BYTE byteValue(const int& index)const {
 		int boundByte = _length / 8;
 		BYTE mask = (1<<(_length - boundByte * 8)) - 1;

@@ -133,6 +133,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BitWriter.h" />
     <ClCompile Include="BMPFile.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="CodingUtil.cpp" />

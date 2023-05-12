@@ -23,6 +23,7 @@ public:
 		DWORD val;
 		DWORD codeLength;
 	};
+	
 private:
 
 	struct TreeNode
@@ -55,7 +56,7 @@ private:
 		}
 	};
 	Heap<TreeNode*, CmpFunc_t, std::vector<TreeNode*>> _freqHeap;
-	size_t _freqMap[256];
+	size_t* _freqMap;
 	int _count;
 	void _bfs_getLengthCountOnly(std::vector<int>& lengthCountTable) {
 		std::queue<std::pair<TreeNode*, DWORD>> nodeQueue;
@@ -133,27 +134,31 @@ private:
 	}
 
 public:
-	IntHuffman() : _count(0){
-		memset(&_freqMap, 0, sizeof(_freqMap));
+	IntHuffman() : _count(0),_freqMap(nullptr){
 	}
 	~IntHuffman() {
+		delete[] _freqMap;
 		while (_freqHeap.size()!=0) {
 			delete _freqHeap.top();
 			_freqHeap.pop();
 		}
-
 	}
-	void setFrequencyMap(const size_t (*freqMap)[256]) {
-		memcpy(_freqMap, freqMap, sizeof(_freqMap));
+	void setFrequencyMap(const size_t* freqMap, const int count) {
+		_count = count;
+		if (_freqMap != nullptr) {
+			delete[] _freqMap;
+		} else {
+			_freqMap = new size_t[count];
+		}
+		memcpy(_freqMap, freqMap, count * sizeof(size_t));
 	}
 	void buildTree() {
 		_freqHeap.clear();
-		for (int i = 0; i < 256;++i) {
+		for (int i = 0; i < _count;++i) {
 			if (_freqMap[i] > 0) {
 				_freqHeap.push(new TreeNode(_freqMap[i], i));
 			}
 		}
-		_count = _freqHeap.size();
 		while (_freqHeap.size() != 1) {
 			TreeNode* left = _freqHeap.top();
 			_freqHeap.pop();
@@ -168,31 +173,96 @@ public:
 		_bfs( table);
 	}
 
-	void getCanonicalCodes(const std::vector<CanonicalTableEntry> &canonicalTable, std::vector<BitString> &bitStringBuf) {
-		bitStringBuf.resize(canonicalTable.size());
-		bitStringBuf[0].setLength(canonicalTable[0].codeLength);
-		bitStringBuf[0].setAll0();
+	void getCanonicalCodes(const std::vector<CanonicalTableEntry> &canonicalTable, std::vector<BitString> &bitStrings) {
+		bitStrings.resize(canonicalTable.size());
+		bitStrings[0].setLength(canonicalTable[0].codeLength);
+		bitStrings[0].setAll0();
 		int count = canonicalTable.size();
 		for (int i = 1; i < count; ++i) {
 			int lengthDiff = canonicalTable[i].codeLength - canonicalTable[i - 1].codeLength;
 			switch (lengthDiff) {
 			case 0:
-				bitStringBuf[i] = bitStringBuf[i - 1] + 1;
+				bitStrings[i] = bitStrings[i - 1] + 1;
 				break;
 			default:
-				bitStringBuf[i] = bitStringBuf[i - 1] + 1;
+				bitStrings[i] = bitStrings[i - 1] + 1;
 				for (int j = 0; j < lengthDiff; ++j) {
-					bitStringBuf[i].push_back(0);
+					bitStrings[i].push_back(0);
 				}
 				break;
 			}
 		}
 	}
 
-	void getCanonicalCodes(const std::vector<int>& canonicalTable, std::vector<BitString>& bitStringBuf) {
+	void getCanonicalCodes(const std::vector<std::vector<DWORD>>& canonicalTable, std::vector<std::vector<BitString>>& bitStringTable) {
 		int count = canonicalTable.size();
 		int i = 0;
-		bitStringBuf.push_back(BitString());
+		bitStringTable.resize(canonicalTable.size());
+		bitStringTable[0].push_back(BitString());
+		int pushedCnt = 0;
+		while (1) {
+			int lastLen = i, lengthDiff;
+			while (canonicalTable[i].size() - pushedCnt == 0) {
+				++i;
+				if (i == count) {
+					return;
+				}
+				pushedCnt = 0;
+			}
+			lengthDiff = i - lastLen;
+			const BitString& last = bitStringTable[lastLen].back();
+			BitString curr = last;
+			curr = last + 1;
+			if (lengthDiff > 0) {
+				for (int j = 0; j < lengthDiff; ++j) {
+					curr.push_back(0);
+				}
+			}
+			bitStringTable[i].push_back(curr);
+			++pushedCnt;
+		}
+	}
+
+	void getCanonicalTable(std::vector<int>& lengthCountTable, std::vector<std::vector<DWORD>>& canonicalTable) {
+		struct Entry {
+			size_t freq;
+			DWORD symbol;
+		};
+		std::vector<Entry> rankedSymbols;
+		for (DWORD i = 0; i < _count; ++i) {
+			if (_freqMap[i] != 0) {
+				rankedSymbols.push_back({ _freqMap[i],i });
+			}
+		}
+		std::sort(rankedSymbols.begin(), rankedSymbols.end(), [](const Entry& lft, const Entry& rgt) {
+			if (lft.freq > rgt.freq) {
+				return true;
+			} else if (lft.freq == rgt.freq) {
+				return lft.symbol < rgt.symbol;
+			} else {
+				return false;
+			}
+		});
+		int lengthCount = lengthCountTable.size();
+		int pushedCount = 0;
+		std::vector<Entry>::iterator rankedSymbolsIter = rankedSymbols.begin();
+		canonicalTable.resize(lengthCount);
+		for (int i = 0; i < lengthCount;) {
+			if (lengthCountTable[i] - pushedCount == 0) {
+				pushedCount = 0;
+				++i;
+			} else {
+				canonicalTable[i].push_back(rankedSymbolsIter->symbol);
+				++rankedSymbolsIter;
+				++pushedCount;
+			}
+		}
+	}
+
+	void getCanonicalCodes(const std::vector<int>& canonicalTable, std::vector<BitString>& bitStrings) {
+		int count = canonicalTable.size();
+		int i = 0;
+		bitStrings.push_back(BitString());
 		int thisLenCnt = 0;
 		while (1) {
 			int lastLen = i, lengthDiff;
@@ -204,7 +274,7 @@ public:
 				thisLenCnt = 0;
 			}
 			lengthDiff = i - lastLen;
-			const BitString& last = bitStringBuf.back();
+			const BitString& last = bitStrings.back();
 			BitString curr = last;
 			curr = last + 1;
 			if (lengthDiff > 0) {
@@ -212,7 +282,7 @@ public:
 					curr.push_back(0);
 				}
 			}
-			bitStringBuf.push_back(curr);
+			bitStrings.push_back(curr);
 			++thisLenCnt;
 		}
 	}
@@ -223,7 +293,7 @@ public:
 		_bfs_getLengthOnly(table);
 	}
 
-	void getCanonicalTable(std::vector<int>& table,int lengthLimit) {
+	void getLengthCountTable(std::vector<int>& table,int lengthLimit) {
 		TreeNode* tree = _freqHeap.top();
 		BitString nodeBits;
 		_bfs_getLengthCountOnly(table);
