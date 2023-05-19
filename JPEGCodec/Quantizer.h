@@ -9,15 +9,15 @@
 class Quantizer
 {
 private:
-	static DWORD _std_qtable_Y[8][8];
+	static BYTE _std_qtable_Y[8][8];
 
-	static DWORD _std_qtable_C[8][8];
+	static BYTE _std_qtable_C[8][8];
 
 	Matrix<float>* _blocks;
 
 	DWORD _blockCnt;
 
-	DWORD (*_qtable)[8];
+	BYTE(*_qtable)[8];
 
 public:
 	void setBlocks(Matrix<float>* blocks,DWORD blockCnt) {
@@ -28,9 +28,17 @@ public:
 		STD_QTABLE_LUMA,
 		STD_QTABLE_CHROMA
 	};
-
-	void setQTable(QTable mode) {
-		switch (mode)
+	static const BYTE* getQTable(QTable tableType) {
+		switch (tableType)
+		{
+		case STD_QTABLE_LUMA:
+			return (BYTE*)_std_qtable_Y;
+		case STD_QTABLE_CHROMA:
+			return (BYTE*)_std_qtable_C;
+		}
+	}
+	void setQTable(QTable tableType) {
+		switch (tableType)
 		{
 		case STD_QTABLE_LUMA:
 			_qtable = _std_qtable_Y;
@@ -40,7 +48,7 @@ public:
 		}
 	}
 	static void quantize(Block* input,Block* output,QTable qtableType) {
-		static DWORD (*qtable)[8];
+		static BYTE(*qtable)[8];
 		switch (qtableType)
 		{
 		case STD_QTABLE_LUMA:

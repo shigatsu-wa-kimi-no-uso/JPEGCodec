@@ -194,6 +194,8 @@ public:
 		}
 	}
 
+	//根据范式哈夫曼符号表canonicalTable获取范式哈夫曼编码表bitStringTable
+	//返回的bitStringTable中, 元素bitStringTable[i][j]恰好为符号canonicalTable[i][j]对应的编码
 	void getCanonicalCodes(const std::vector<std::vector<DWORD>>& canonicalTable, std::vector<std::vector<BitString>>& bitStringTable) {
 		int count = canonicalTable.size();
 		int i = 0;
@@ -223,7 +225,11 @@ public:
 		}
 	}
 
-	void getCanonicalTable(std::vector<int>& lengthCountTable, std::vector<std::vector<DWORD>>& canonicalTable) {
+	//getCanonicalTable:根据编码长度计数向量lengthCountTable获取范式哈夫曼符号表canonicalTable
+	//表的结构:二维向量T
+	//T[i]: 一维向量,向量中存储对应编码长度为i的符号
+	//T[i][j]: 整型,表示一个符号
+ 	void getCanonicalTable(std::vector<int>& lengthCountTable, std::vector<std::vector<DWORD>>& canonicalTable) {
 		struct Entry {
 			size_t freq;
 			DWORD symbol;

@@ -167,7 +167,7 @@ struct YCbCr
 };
 
 
-
+//已转换为大端
 struct Marker 
 {
 	enum Common	: WORD
@@ -204,7 +204,7 @@ struct Marker
 		APP15
 	};
 
-	enum SOFMarker //帧起始符号, 包含差分/非差分式, 均采用哈夫曼编码方式
+	enum SOFMarker : WORD //帧起始符号, 包含差分/非差分式, 均采用哈夫曼编码方式
 	{
 		BASELINE_DCT = 0xFFC0,
 		EXTENDED_SEQ_DCT = 0xFFC1,
@@ -215,7 +215,7 @@ struct Marker
 		DIFF_LOSSLESS = 0xFFC7,
 	};
 
-	enum HTSpec	//哈夫曼表定义符号
+	enum HTSpec : WORD	//哈夫曼表定义符号
 	{
 		DHT = 0xFFC4
 	};
@@ -241,8 +241,7 @@ struct JPEG_JFIFHeader
 		BYTE YThumbnail;	//虽略图的垂直像素
 		//sizeof(JPEG_JFIFHeader::Info) == 16
 	};
-
-	WORD marker = Marker::APP0;		//起始标记
+	WORD JFIFmarker;		//起始标记
 	Info info;						//内容
 };
 
@@ -258,8 +257,8 @@ struct JPEG_QTableHeader
 			PREC_16BIT
 		}precision : 4;	//高4位 精度 0为8bit, 1为16bit
 	};
-	const WORD marker = Marker::DQT;	//定义符
-	Info info;							//内容
+	WORD DQTmarker;	//定义符Marker::DQT
+	Info info;				//内容
 };
 
 struct JPEG_QTable_8BitPrec {
@@ -273,23 +272,23 @@ struct JPEG_QTable_16BitPrec {
 };
 
 
-struct JPEG_FrameHeader_BDCT_YCbCr
+struct JPEG_FrameHeader_YCbCr
 {
 	struct Info
 	{
 		WORD length;		//头长度
-		const enum PRECISION : BYTE
+		enum PRECISION : BYTE
 		{
 			PREC_12BIT,
 			PREC_8BIT
-		}precision = PREC_8BIT ;		//采样精度, 常见为8bit
+		}precision;		//采样精度, 常见为8bit
 		WORD numberOfLines;	//高度像素
 		WORD samplesPerLine;//宽度像素
-		const enum : BYTE {
+		enum : BYTE {
 			COMPCNT_GRAY,
 			COMPCNT_YUV = 3,
 			COMPCNT_CMYK = 4
-		}numberOfComponents = COMPCNT_YUV;	//分量数(YCbCr为3, 只有灰度为1, CMYK为4)
+		}numberOfComponents;	//分量数(YCbCr为3, 只有灰度为1, CMYK为4)
 		struct ImgComponent 
 		{
 			enum : BYTE 
@@ -306,8 +305,8 @@ struct JPEG_FrameHeader_BDCT_YCbCr
 			BYTE qtableID;			//量化表ID
 		} components[COMPCNT_YUV];			//YCbCr恒有3分量
 	};
-	const WORD marker = Marker::BASELINE_DCT;	//DCT类型标记
-	Info info;									//内容
+	WORD DCTmarker;	//DCT类型标记 Marker::BASELINE_DCT
+	Info info;				//内容
 };
 
 
@@ -325,8 +324,8 @@ struct JPEG_HTableHeader
 		}type : 4;				//哈夫曼表适用对象, 高4位, 有DC和AC可选
 		BYTE tableEntryLen[16];	//哈夫曼表各项长度,共16项
 	};
-	const WORD marker = Marker::DHT;		//定义符
-	Info info;								//内容
+	WORD DHTmarker;		//定义符 Marker::DHT
+	Info info;					//内容
 };
 
 struct JPEG_HTable
@@ -337,11 +336,10 @@ struct JPEG_HTable
 
 struct JPEG_ScanHeader_BDCT_YCbCr
 {
-	const WORD marker = Marker::SOS;		//定义符
 	struct Info
 	{
 		WORD length;				//长度
-		const enum : BYTE {
+		enum : BYTE {
 			COMPCNT_GRAY,
 			COMPCNT_YUV = 3,
 			COMPCNT_CMYK = 4
@@ -357,11 +355,13 @@ struct JPEG_ScanHeader_BDCT_YCbCr
 			BYTE AC_HTableID : 4;
 			BYTE DC_HTableID : 4;
 		}components[COMPCNT_YUV];
-		const BYTE startOfSpectralSel = 0;	//谱选择开始,固定为0
-		const BYTE endOfSpectralSel = 63;	//谱选择结束,固定为63
-		const BYTE successiveApproxBitPosL : 4 = 0;		//default initialization. C++20 only
-		const BYTE successiveApproxBitPosH : 4 = 0;		//default initialization. C++20 only
+		BYTE startOfSpectralSel = 0;	//谱选择开始,固定为0
+		BYTE endOfSpectralSel = 63;	//谱选择结束,固定为63
+		BYTE successiveApproxBitPosL : 4 = 0;		//default initialization. C++20 only
+		BYTE successiveApproxBitPosH : 4 = 0;		//default initialization. C++20 only
 	};
+	WORD SOSmarker;		//定义符Marker::SOS
+	Info info;
 };
 
 struct JPEG_Scan_4H
@@ -375,16 +375,16 @@ struct JPEG_Frame_BDCT_2Q4H
 {
 	JPEG_JFIFHeader jfifHeader;
 	JPEG_QTable_8BitPrec QTables[2];
-	JPEG_FrameHeader_BDCT_YCbCr frameHeader;
+	JPEG_FrameHeader_YCbCr frameHeader;
 	JPEG_Scan_4H scanData;
 };
 
 //Baseline DCT 2量化表 4哈夫曼表 JPEG 文件结构
 struct JPEG_File_BDCT_2Q4H
 {
-	const WORD SOImarker = Marker::SOI;
+	WORD SOImarker; // Marker::SOI;
 	JPEG_Frame_BDCT_2Q4H frame;
-	const WORD EOFmarker = Marker::EOI;
+	WORD EOFmarker; // Marker::EOI;
 };
 
 
