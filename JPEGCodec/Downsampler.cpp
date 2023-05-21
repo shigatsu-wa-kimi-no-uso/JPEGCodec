@@ -44,17 +44,17 @@ void Downsampler::setSubsamplingFactors(BYTE subsampFact_H, BYTE subsampFact_V)
 
 void Downsampler::sample(Matrix<float>* matrix_y, Matrix<float>* matrix_cb, Matrix<float>* matrix_cr)
 {
-	for (int i = 0; i < _ycbcrColors->row_cnt; ++i) {
-		for (int j = 0; j < _ycbcrColors->column_cnt; ++j) {
+	for (DWORD i = 0; i < _ycbcrColors->row_cnt; ++i) {
+		for (DWORD j = 0; j < _ycbcrColors->column_cnt; ++j) {
 			(*matrix_y)[i][j] = (*_ycbcrColors)[i][j].Y;
 		}
 	}
 
-	int cbcr_samp_row_cnt = getChromaRowSampleCount();
-	int cbcr_samp_col_cnt = getChromaColumnSampleCount();
+	DWORD cbcr_samp_row_cnt = getChromaRowSampleCount();
+	DWORD cbcr_samp_col_cnt = getChromaColumnSampleCount();
 
-	for (int i = 0; i < cbcr_samp_row_cnt; ++i) {
-		for (int j = 0; j < cbcr_samp_col_cnt; ++j) {
+	for (DWORD i = 0; i < cbcr_samp_row_cnt; ++i) {
+		for (DWORD j = 0; j < cbcr_samp_col_cnt; ++j) {
 			(*matrix_cb)[i][j] = (*_ycbcrColors)[i * _subsampFact_V][j * _subsampFact_H].Cb;
 			(*matrix_cr)[i][j] = (*_ycbcrColors)[i * _subsampFact_V][j * _subsampFact_H].Cr;
 		}
@@ -63,17 +63,17 @@ void Downsampler::sample(Matrix<float>* matrix_y, Matrix<float>* matrix_cb, Matr
 
 void Downsampler::mean_sample(Matrix<float>* matrix_y, Matrix<float>* matrix_cb, Matrix<float>* matrix_cr)
 {
-	for (int i = 0; i < _ycbcrColors->row_cnt; ++i) {
-		for (int j = 0; j < _ycbcrColors->column_cnt; ++j) {
+	for (DWORD i = 0; i < _ycbcrColors->row_cnt; ++i) {
+		for (DWORD j = 0; j < _ycbcrColors->column_cnt; ++j) {
 			(*matrix_y)[i][j] = (*_ycbcrColors)[i][j].Y;
 		}
 	}
 
-	for (int i = 0; i < _ycbcrColors->row_cnt / _subsampFact_V; ++i) {
-		for (int j = 0; j < _ycbcrColors->column_cnt / _subsampFact_H; ++j) {
+	for (DWORD i = 0; i < _ycbcrColors->row_cnt / _subsampFact_V; ++i) {
+		for (DWORD j = 0; j < _ycbcrColors->column_cnt / _subsampFact_H; ++j) {
 			float sum_cb = 0, sum_cr = 0;
-			for (int p = 0; p < _subsampFact_V; ++p) {
-				for (int q = 0; q < _subsampFact_H; ++q) {
+			for (DWORD p = 0; p < _subsampFact_V; ++p) {
+				for (DWORD q = 0; q < _subsampFact_H; ++q) {
 					sum_cb += (*_ycbcrColors)[i * _subsampFact_V + p][j * _subsampFact_H + q].Cb;
 					sum_cr += (*_ycbcrColors)[i * _subsampFact_V + p][j * _subsampFact_H + q].Cr;
 				}
@@ -83,14 +83,14 @@ void Downsampler::mean_sample(Matrix<float>* matrix_y, Matrix<float>* matrix_cb,
 		}
 	}
 
-	int lastSamp_row_index = getChromaRowSampleCount() - 1;
-	int lastSamp_col_index = getChromaColumnSampleCount() - 1;
+	DWORD lastSamp_row_index = getChromaRowSampleCount() - 1;
+	DWORD lastSamp_col_index = getChromaColumnSampleCount() - 1;
 	int lr_corner_neednt_complement = -2;		//右下角是否需要补充标记, 为0说明需要补充
 	//检测行是否需要补充采样
 	if (lastSamp_row_index == _ycbcrColors->row_cnt / _subsampFact_V) {
-		for (int j = 0; j < _ycbcrColors->column_cnt / _subsampFact_H; ++j) {
+		for (DWORD j = 0; j < _ycbcrColors->column_cnt / _subsampFact_H; ++j) {
 			float sum_cb = 0, sum_cr = 0;
-			for (int q = 0; q < _subsampFact_H; ++q) {
+			for (DWORD q = 0; q < _subsampFact_H; ++q) {
 				sum_cb += (*_ycbcrColors)[lastSamp_row_index * _subsampFact_V][j * _subsampFact_H + q].Cb;
 				sum_cr += (*_ycbcrColors)[lastSamp_row_index * _subsampFact_V][j * _subsampFact_H + q].Cr;
 			}
@@ -102,9 +102,9 @@ void Downsampler::mean_sample(Matrix<float>* matrix_y, Matrix<float>* matrix_cb,
 
 	//检测列是否需要补充采样
 	if (lastSamp_col_index == _ycbcrColors->column_cnt / _subsampFact_H) {
-		for (int i = 0; i < _ycbcrColors->row_cnt / _subsampFact_V; ++i) {
+		for (DWORD i = 0; i < _ycbcrColors->row_cnt / _subsampFact_V; ++i) {
 			float sum_cb = 0, sum_cr = 0;
-			for (int p = 0; p < _subsampFact_V; ++p) {
+			for (DWORD p = 0; p < _subsampFact_V; ++p) {
 				sum_cb += (*_ycbcrColors)[i * _subsampFact_V + p][lastSamp_col_index * _subsampFact_H].Cb;
 				sum_cr += (*_ycbcrColors)[i * _subsampFact_V + p][lastSamp_col_index * _subsampFact_H].Cr;
 			}

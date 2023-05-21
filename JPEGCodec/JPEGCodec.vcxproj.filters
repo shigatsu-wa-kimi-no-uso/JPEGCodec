@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="testsamp.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="ColorSpaceConverter.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -36,9 +33,6 @@
     <ClCompile Include="BMPFile.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="test.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="CodingUtil.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -46,6 +40,15 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="BitWriter.h">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Encoder.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="BitWriter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="JPEGFileBuilder.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -87,6 +90,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="UtilFunc.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="JPEGFileBuilder.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

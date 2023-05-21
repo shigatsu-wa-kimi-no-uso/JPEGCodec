@@ -66,13 +66,13 @@ const char* dst;
 BYTE subsampFact_H, subsampFact_V;
 SubsampFact subsampFact;
 bool mean_samp_on;
-
+float qualityFactor;
 
 
 void writeComponent(Matrix<BYTE>* outputBuffer,FILE* hOutput, Matrix<float>* compMatrix, DWORD fileOffset) {
     fseek(hOutput, fileOffset, SEEK_SET);
-    for (int i = 0; i < compMatrix->row_cnt; ++i) {
-        for (int j = 0; j < compMatrix->column_cnt; ++j) {
+    for (DWORD i = 0; i < compMatrix->row_cnt; ++i) {
+        for (DWORD j = 0; j < compMatrix->column_cnt; ++j) {
             (*outputBuffer)[i][j] = myround((*compMatrix)[i][j]);
         }
         fwrite((*outputBuffer)[i], sizeof(BYTE), compMatrix->column_cnt, hOutput);
@@ -80,8 +80,8 @@ void writeComponent(Matrix<BYTE>* outputBuffer,FILE* hOutput, Matrix<float>* com
 }
 
 void writeComponent(Matrix<BYTE>* outputBuffer, FILE* hOutput, Matrix<float>* compMatrix) {
-    for (int i = 0; i < compMatrix->row_cnt; ++i) {
-        for (int j = 0; j < compMatrix->column_cnt; ++j) {
+    for (DWORD i = 0; i < compMatrix->row_cnt; ++i) {
+        for (DWORD j = 0; j < compMatrix->column_cnt; ++j) {
             (*outputBuffer)[i][j] = myround((*compMatrix)[i][j]);
         }
         fwrite((*outputBuffer)[i], sizeof(BYTE), compMatrix->column_cnt, hOutput);
@@ -150,9 +150,8 @@ void encode2(LONG y_start, LONG y_end, int id) {
     fclose(hOutput);
 }
 
-void encode(BMPFile bmpFile, const char* outputFilePath, BYTE subsampFact_H,BYTE subsampFact_V, bool mean_samp_on) 
+void encode(BMPFile bmpFile, SubsampFact subsampFact,const char* outputFilePath)
 {
-    FILE* hOutput = fopen(outputFilePath, "wb");
     ColorSpaceConverter csc;
 
     Matrix<YCbCr> ycbcrMat = Matrix<YCbCr>(bmpFile.height(), bmpFile.width());
@@ -168,34 +167,12 @@ void encode(BMPFile bmpFile, const char* outputFilePath, BYTE subsampFact_H,BYTE
         csc.RGB2YCbCr(&rgbMat, &ycbcrMat);
         rgbMat.~Matrix();
     }
-
-    Downsampler sampler;
-    sampler.setChannelData(&ycbcrMat);
-    sampler.setSubsamplingFactors(subsampFact_H, subsampFact_V);
-    int col_sampcnt = sampler.getChromaColumnSampleCount();
-    int row_sampcnt = sampler.getChromaRowSampleCount();
-    Matrix<float> y = Matrix<float>(bmpFile.height(), bmpFile.width());
-    Matrix<float> cb = Matrix<float>(row_sampcnt, col_sampcnt);
-    Matrix<float> cr = Matrix<float>(row_sampcnt, col_sampcnt);
-
-    if (mean_samp_on) {
-        sampler.mean_sample(&y, &cb, &cr);
-    } else {
-        sampler.sample(&y, &cb, &cr);
-    }
-    ycbcrMat.~Matrix();
-
-    Matrix<BYTE> outputBuffer = Matrix<BYTE>(y.row_cnt, y.column_cnt);
-    writeComponent(&outputBuffer, hOutput, &y);
-    y.~Matrix();
-
-    writeComponent(&outputBuffer, hOutput, &cb);
-    cb.~Matrix();
-
-    writeComponent(&outputBuffer, hOutput, &cr);
-    cr.~Matrix();
-
-    fclose(hOutput);
+    Encoder encoder;
+    encoder.makeMCUs(ycbcrMat, subsampFact);
+    encoder.doFDCT();
+    encoder.doQuantize(qualityFactor);
+    encoder.encode();
+    encoder.makeJPGFile(outputFilePath);
 }
 
 bool initialize(int argc, char** argv) {
@@ -203,13 +180,14 @@ bool initialize(int argc, char** argv) {
     const char* fact_v = getoptarg(argc, argv, "-fact_v");
     src = getoptarg(argc, argv, "-src");
     dst = getoptarg(argc, argv, "-dst");
-
-    if (src == nullptr || dst == nullptr || fact_h == nullptr || fact_v == nullptr) {
+    const char* szQualityFactor = getoptarg(argc,argv,"-quality");
+    if (src == nullptr || dst == nullptr || fact_h == nullptr || fact_v == nullptr || szQualityFactor == nullptr) {
         return false;
     }
 
     subsampFact.factor_h = atoi(fact_h);
     subsampFact.factor_v = atoi(fact_v);
+    qualityFactor = atof(szQualityFactor);
     mean_samp_on = testopt(argc, argv, "-mean_samp");
 
     printf("fact_h: %d fact_v: %d\n", (int)subsampFact.factor_h, (int)subsampFact.factor_v);
@@ -221,8 +199,10 @@ bool initialize(int argc, char** argv) {
     }
 
     if (!bmpFile.load(src)) {
-        perror("Malformed BMP file or unsupported BMP format.");
+        perror("Malformed BMP hFile or unsupported BMP format.");
+        return false;
     }
+    return true;
 }
 
 
@@ -253,11 +233,17 @@ void print(std::vector<BitString>& bs, std::vector<IntHuffman::CanonicalTableEnt
     }
 }
 
+
+int main(int argc, char** argv) {
+    initialize(argc, argv);
+    encode(bmpFile, subsampFact, dst);
+}
+
 int main0() {
     return 0;
 }
 
-int main(int argc, char** argv) {
+int main9(int argc, char** argv) {
 	/*DWORD zigzag[8][8] = {
 		0,1,5,6,14,15,27,28,
 		2,4,7,13,16,26,29,42,
@@ -352,10 +338,10 @@ int main3(int argc, char** argv)
     }
 
 	if (!bmpFile.load(src)) {
-		perror("Malformed BMP file or unsupported BMP format.");
+		perror("Malformed BMP hFile or unsupported BMP format.");
 	}
 
-    encode(bmpFile, dst, subsampFact_H, subsampFact_V, mean_samp_on);
+    //encode(bmpFile, dst, subsampFact_H, subsampFact_V, mean_samp_on);
 
 	return 0;
 }
@@ -376,7 +362,7 @@ int main3(int argc, char** argv)
     }
     delete[] threads;
 */
-
+/*
 int main2(int argc,char** argv)
 {
     std::ios::sync_with_stdio(false);
@@ -401,7 +387,7 @@ int main2(int argc,char** argv)
    
 
     if (!bmpFile.load(src)) {
-        perror("Malformed BMP file or unsupported BMP format.");
+        perror("Malformed BMP hFile or unsupported BMP format.");
     }
 
     timer.pressAnyKeyAndStart("allocate rgb buffer:");
@@ -454,7 +440,7 @@ int main2(int argc,char** argv)
     FILE* out = fopen(dst, "wb");
     for (int i = 0; i < y.row_cnt; ++i) {
         for (int j = 0; j < y.column_cnt; ++j) {
-            BYTE val = round(y[i][j]);
+            BYTE val = myround(y[i][j]);
             fwrite(&val, 1, 1, out);
         }
     }
@@ -464,7 +450,7 @@ int main2(int argc,char** argv)
     timer.pressAnyKeyAndStart("save cb comp:");
     for (int i = 0; i < cb.row_cnt; ++i) {
         for (int j = 0; j < cb.column_cnt; ++j) {
-            BYTE val = round(cb[i][j]);
+            BYTE val = myround(cb[i][j]);
             fwrite(&val, 1, 1, out);
         }
     }
@@ -474,7 +460,7 @@ int main2(int argc,char** argv)
     timer.pressAnyKeyAndStart("save cr comp:");
     for (int i = 0; i < cr.row_cnt; ++i) {
         for (int j = 0; j < cr.column_cnt; ++j) {
-            BYTE val = round(cr[i][j]);
+            BYTE val = (BYTE)round(cr[i][j]);
             fwrite(&val, 1, 1, out);
         }
     }
@@ -483,4 +469,4 @@ int main2(int argc,char** argv)
     timer2.stop();
     return 0;
 }
-
+*/

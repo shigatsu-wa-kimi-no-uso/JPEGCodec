@@ -6,12 +6,12 @@
 #include "UtilFunc.h"
 
 float ColorSpaceConverter::_luma(const RGBTriple* rgb) {
-	float y = 0.299 * rgb->rgbRed + 0.587 * rgb->rgbGreen + 0.114 * rgb->rgbBlue;
+	float y = 0.299f * rgb->rgbRed + 0.587f * rgb->rgbGreen + 0.114f * rgb->rgbBlue;
 	return _normalize(y);
 }
 
 float ColorSpaceConverter::_blueChroma(const RGBTriple* rgb) {
-	float cb = -0.169 * rgb->rgbRed - 0.331 * rgb->rgbGreen + 0.5 * rgb->rgbBlue + 128;
+	float cb = -0.169f * rgb->rgbRed - 0.331f * rgb->rgbGreen + 0.5f * rgb->rgbBlue + 128;
 	return _normalize(cb);
 }
 

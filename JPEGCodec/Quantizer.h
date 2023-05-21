@@ -1,10 +1,8 @@
 #pragma once
-#include "typedef.h"
+#define _CRT_SECURE_NO_WARNINGS
 #include <cmath>
+#include "typedef.h"
 #include "UtilFunc.h"
-
-
-
 
 class Quantizer
 {
@@ -13,49 +11,68 @@ private:
 
 	static BYTE _std_qtable_C[8][8];
 
-	Matrix<float>* _blocks;
+	static BYTE _user_qtable_Y[8][8];
 
-	DWORD _blockCnt;
+	static BYTE _user_qtable_C[8][8];
 
-	BYTE(*_qtable)[8];
+	//缩放因子函数
+	//    { 5000.0f/q 0<=q<50
+	//s = { 200-2q    50<=q<100
+	//    { 1         q=100
+	static float _scalingFactor(BYTE stdQuant,float qualityFactor) {
+		if (qualityFactor >= 0 && qualityFactor < 50) {
+			return 5000.0f / qualityFactor;
+		} else if (qualityFactor < 100) {
+			return 200.0f - 2.0f * qualityFactor;
+		} else {
+			return 1;
+		}
+	}
+
+	//量化因子计算公式
+	static BYTE _userQuant(BYTE stdQuant, float qualityFactor) {
+		return max((BYTE)(min(255.0f,(_scalingFactor(stdQuant,qualityFactor) * stdQuant + 50) / 100.0f)) ,1);
+	}
+	static void _generateUserTable(const BYTE(&stdTable)[8][8],BYTE(&userTable)[8][8], float qualityFactor) {
+		for (int r = 0; r < BLOCK_ROWCNT; ++r) {
+			for (int c = 0; c < BLOCK_COLCNT; ++c) {
+				userTable[r][c] = _userQuant(stdTable[r][c], qualityFactor);
+			}
+		}
+	}
+
 
 public:
-	void setBlocks(Matrix<float>* blocks,DWORD blockCnt) {
-		_blocks = blocks;
-		_blockCnt = blockCnt;
-	}
 	enum QTable{
 		STD_QTABLE_LUMA,
 		STD_QTABLE_CHROMA
 	};
-	static const BYTE* getQTable(QTable tableType) {
+
+	static void generateUserTable(float qualityFactor) {
+		_generateUserTable(_std_qtable_Y, _user_qtable_Y, qualityFactor);
+		_generateUserTable(_std_qtable_C, _user_qtable_C, qualityFactor);
+	}
+
+	static const BYTE* getQuantTable(QTable tableType) {
 		switch (tableType)
 		{
 		case STD_QTABLE_LUMA:
-			return (BYTE*)_std_qtable_Y;
+			return (BYTE*)_user_qtable_Y;
 		case STD_QTABLE_CHROMA:
-			return (BYTE*)_std_qtable_C;
+			return (BYTE*)_user_qtable_C;
 		}
+		return nullptr;
 	}
-	void setQTable(QTable tableType) {
-		switch (tableType)
-		{
-		case STD_QTABLE_LUMA:
-			_qtable = _std_qtable_Y;
-			break;
-		case STD_QTABLE_CHROMA:
-			_qtable = _std_qtable_C;
-		}
-	}
+
 	static void quantize(Block* input,Block* output,QTable qtableType) {
 		static BYTE(*qtable)[8];
 		switch (qtableType)
 		{
 		case STD_QTABLE_LUMA:
-			qtable = _std_qtable_Y;
+			qtable = _user_qtable_Y;
 			break;
 		case STD_QTABLE_CHROMA:
-			qtable = _std_qtable_C;
+			qtable = _user_qtable_C;
 		}
 
 		for (int r = 0; r < BLOCK_ROWCNT; ++r) {
@@ -64,15 +81,5 @@ public:
 			}
 		}
 	}
-	void quantize(Matrix<float>* outputSequence) {
-		for (int i = 0; i < _blockCnt; ++i) {
-			for (int x = 0; x < 8; ++x) {
-				for (int y = 0; y < 8; ++y) {
-					outputSequence[i][x][y] = myround(_blocks[i][x][y] / _qtable[x][y]);
-				}
-			}
-		}
-	}
-
 };
 

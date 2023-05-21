@@ -101,15 +101,15 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>Default</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <OutputFile>$(OutDir)testsamp$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)$(ProjectName)$(TargetExt)</OutputFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -133,17 +133,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BitWriter.cpp" />
     <ClCompile Include="BitWriter.h" />
     <ClCompile Include="BMPFile.cpp" />
+    <ClCompile Include="Encoder.cpp" />
+    <ClCompile Include="JPEGFileBuilder.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="CodingUtil.cpp" />
     <ClCompile Include="DCT.cpp" />
     <ClCompile Include="DCTBlockSplitter.cpp" />
     <ClCompile Include="ColorSpaceConverter.cpp" />
     <ClCompile Include="Downsampler.cpp" />
-    <ClCompile Include="testsamp.cpp" />
     <ClCompile Include="Quantizer.cpp" />
-    <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BitString.h" />
@@ -156,6 +157,7 @@
     <ClInclude Include="Downsampler.h" />
     <ClInclude Include="Heap.h" />
     <ClInclude Include="IntHuffman.h" />
+    <ClInclude Include="JPEGFileBuilder.h" />
     <ClInclude Include="Quantizer.h" />
     <ClInclude Include="typedef.h" />
     <ClInclude Include="UtilFunc.h" />

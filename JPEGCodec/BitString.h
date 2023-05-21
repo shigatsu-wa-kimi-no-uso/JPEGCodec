@@ -1,7 +1,8 @@
 #pragma once
-#include"typedef.h"
 #include<assert.h>
 #include<ostream>
+#include"typedef.h"
+
 
 #define DEBUG
 
@@ -47,6 +48,7 @@ private:
 public:
 	BitString():_bits(0),_length(0){}
 	BitString(const DWORD& val) :_bits(val), _length(_getMSBIndex(val)) {}
+	BitString(const DWORD& val,const int length) :_bits(val), _length(length) {}
 	BitString(const BitString& val) :_bits(val._bits), _length(val._length) {}
 	void set1(int index) {
 		_testOutOfBound(index);
@@ -61,7 +63,7 @@ public:
 	}
 	void push_back(bool bit) {
 		_bits <<= 1;
-		_bits |= bit;
+		_bits |= (DWORD)bit;
 		_length++;
 		_testIntegrity();
 	}
@@ -151,16 +153,22 @@ public:
 	}
 
 	BitString operator<<(const BYTE& val) {
-		_bits <<= val;
+		BitString bitString(*this);
+		bitString._bits <<= val;
+		return bitString;
 	}
 	BitString operator>>(const BYTE& val) {
-		_bits >>= val;
+		BitString bitString(*this);
+		bitString._bits >>= val;
+		return bitString;
 		set0(_length - 1);
 	}
 	BitString operator~() {
-		_bits = ~_bits;
+		BitString bitString(*this);
+		bitString._bits = ~bitString._bits;
+		return bitString;
 	}
-	friend std::ostream& operator<<(std::ostream& os, BitString& rgt)
+	friend std::ostream& operator<<( std::ostream& os,const BitString& rgt)
 	{
 		static char str[32];
 		int index = 0;

@@ -2,9 +2,7 @@
 #ifndef typedef_h__
 #define typedef_h__
 #define _CRT_SECURE_NO_WARNINGS
-#include <type_traits>
-#include <winsock.h>
-#include "BitString.h"
+#include <vector>
 
 #define MACROS
 #define ALIAS
@@ -20,11 +18,13 @@
 #endif
 
 #ifdef ALIAS
+using size_t = unsigned long long;
 using WORD = unsigned short;
 using DWORD = unsigned long;
 using LONG = long;
 using BYTE = unsigned char;
 using Block = float[BLOCK_ROWCNT][BLOCK_COLCNT];
+using HuffmanTable = std::vector<std::vector<DWORD>>;
 #endif
 
 #ifdef STRUCTS
@@ -38,8 +38,10 @@ union SubsampFact{
 		YUV_422 = 0x21,
 		YUV_420 = 0x22
 	}factor;
-	BYTE factor_v : 4;	//低4位 垂直采样因子
-	BYTE factor_h : 4;	//高4位 水平采样因子
+	struct {
+		BYTE factor_v : 4;	//低4位 垂直采样因子
+		BYTE factor_h : 4;	//高4位 水平采样因子
+	};
 };
 
 struct BitmapFileHeader
@@ -103,25 +105,25 @@ struct Matrix
 private:
 	T** _2darr;
 public:
-	const int column_cnt;
-	const int row_cnt;
+	const DWORD column_cnt;
+	const DWORD row_cnt;
 	Matrix(){}
-	Matrix(const int row_cnt, const int column_cnt)
+	Matrix(const DWORD row_cnt, const DWORD column_cnt)
 		:column_cnt(column_cnt), row_cnt(row_cnt) {
 		_2darr = new T * [row_cnt];
-		for (int i = 0; i < row_cnt; ++i) {
+		for (DWORD i = 0; i < row_cnt; ++i) {
 			_2darr[i] = new T[column_cnt];
 		}
 	}
 
 	
-	template<int _col_cnt, int _row_cnt>
+	template<DWORD _col_cnt, DWORD _row_cnt>
 	Matrix(const T(&mat)[_row_cnt][_col_cnt]) 
 		:column_cnt(_col_cnt), row_cnt(_row_cnt) {
 		_2darr = new T * [row_cnt];
-		for (int i = 0; i < row_cnt; ++i) {
+		for (DWORD i = 0; i < row_cnt; ++i) {
 			_2darr[i] = new T[column_cnt];
-			for (int j = 0; j < column_cnt; ++j) {
+			for (DWORD j = 0; j < column_cnt; ++j) {
 				_2darr[i][j] = mat[i][j];
 			}
 		}
@@ -131,27 +133,27 @@ public:
 		:column_cnt(lists.size()), row_cnt(lists.begin()->size()) {
 		_2darr = new T * [row_cnt];
 		auto listsIter = lists.begin();
-		for (int i = 0; i < row_cnt; ++i,++listsIter) {
+		for (DWORD i = 0; i < row_cnt; ++i,++listsIter) {
 			_2darr[i] = new T[column_cnt];
 			auto listIter = listsIter->begin();
-			for (int j = 0; j < column_cnt; ++j, ++listIter) {
+			for (DWORD j = 0; j < column_cnt; ++j, ++listIter) {
 				_2darr[i][j] = *listIter;
 			}
 		}
 	}
 
-	T* operator[](const int index) const {
+	T* operator[](const DWORD index) const {
 		return _2darr[index];
 	}
 
-	T* row_pointer(const int index) const {
+	T* row_pointer(const DWORD index) const {
 		return _2darr[index];
 	}
 	~Matrix() {
 		if (_2darr == nullptr) {
 			return;
 		}
-		for (int i = 0; i < row_cnt; ++i) {
+		for (DWORD i = 0; i < row_cnt; ++i) {
 			delete[] _2darr[i];
 		}
 		delete[] _2darr;
@@ -279,8 +281,8 @@ struct JPEG_FrameHeader_YCbCr
 		WORD length;		//头长度
 		enum PRECISION : BYTE
 		{
-			PREC_12BIT,
-			PREC_8BIT
+			PREC_12BIT = 12,
+			PREC_8BIT = 8
 		}precision;		//采样精度, 常见为8bit
 		WORD numberOfLines;	//高度像素
 		WORD samplesPerLine;//宽度像素
@@ -299,8 +301,10 @@ struct JPEG_FrameHeader_YCbCr
 			}identifier; //分量ID, YCbCr 3分量情况下, 1对应Y, 2对应Cb, 3对应Cr
 			union {
 				BYTE _subsampFact;
-				BYTE VSubsampFact : 4;	//低4位 垂直采样因子
-				BYTE HSubsampFact : 4;	//高4位 水平采样因子
+				struct {
+					BYTE VSubsampFact : 4;	//低4位 垂直采样因子
+					BYTE HSubsampFact : 4;	//高4位 水平采样因子
+				};
 			};
 			BYTE qtableID;			//量化表ID
 		} components[COMPCNT_YUV];			//YCbCr恒有3分量
@@ -309,7 +313,19 @@ struct JPEG_FrameHeader_YCbCr
 	Info info;				//内容
 };
 
-
+enum class HTableType : BYTE
+{
+	DC,
+	AC,
+	MAXENUMVAL
+};
+enum class Component : BYTE
+{
+	LUMA = 0x1,
+	CHROMA_B,
+	CHROMA_R,
+	MAXENUMVAL
+};
 
 struct JPEG_HTableHeader
 {
@@ -317,22 +333,21 @@ struct JPEG_HTableHeader
 	{
 		WORD length;	//长度
 		BYTE tableID : 4;	//哈夫曼表ID, 低4位
-		enum : BYTE
-		{
-			DC,
-			AC
-		}type : 4;				//哈夫曼表适用对象, 高4位, 有DC和AC可选
+		HTableType type : 4;	//哈夫曼表适用对象, 高4位, 有DC和AC可选
 		BYTE tableEntryLen[16];	//哈夫曼表各项长度,共16项
 	};
 	WORD DHTmarker;		//定义符 Marker::DHT
 	Info info;					//内容
 };
 
+
 struct JPEG_HTable
 {
 	JPEG_HTableHeader header;
 	BYTE* entries[16];		//哈夫曼表 16项,每项为一个数组
 };
+
+
 
 struct JPEG_ScanHeader_BDCT_YCbCr
 {
@@ -346,12 +361,7 @@ struct JPEG_ScanHeader_BDCT_YCbCr
 		}numberOfComponents = COMPCNT_YUV;	//分量数(YCbCr 为 3)
 		struct ImgComponent
 		{
-			enum : BYTE
-			{
-				LUMA = 0x1,
-				CHROMA_B,
-				CHROMA_R
-			}identifier; //分量ID, YCbCr 3分量情况下, 1对应Y, 2对应Cb, 3对应Cr; 与FrameHeader中的对应
+			Component identifier; //分量ID, YCbCr 3分量情况下, 1对应Y, 2对应Cb, 3对应Cr; 与FrameHeader中的对应
 			BYTE AC_HTableID : 4;
 			BYTE DC_HTableID : 4;
 		}components[COMPCNT_YUV];
@@ -386,7 +396,6 @@ struct JPEG_File_BDCT_2Q4H
 	JPEG_Frame_BDCT_2Q4H frame;
 	WORD EOFmarker; // Marker::EOI;
 };
-
 
 struct MCU {
 	Block** y;

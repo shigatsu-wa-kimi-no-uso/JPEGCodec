@@ -13,25 +13,25 @@ class Heap
 private:
 	Compare_Func_t _cmpFunc;
 	Container_t _heap;
-	int _lastIndex() {
-		return _heap.size() - 1;
+	size_t _lastIndex() {
+		return _heap.size() == 0 ? 0 : _heap.size() - 1;
 	}
-	int _topIndex() {
+	size_t _topIndex() {
 		return 0;
 	}
-	int _leftSon(int index) {
+	size_t _leftSon(size_t index) {
 		return (index << 1) + 1;
 	}
-	int _rightSon(int index) {
+	size_t _rightSon(size_t index) {
 		return (index << 1) + 2;
 	}
-	int _parent(int index) {
+	size_t _parent(size_t index) {
 		return (index - 1) >> 1;
 	}
-	void _emerge(int index) {
-		int currIndex = index;
+	void _emerge(size_t index) {
+		size_t currIndex = index;
 		while (currIndex != _topIndex()) {
-			int parentIndex = _parent(currIndex);
+			size_t parentIndex = _parent(currIndex);
 			Elem_t& curr = _heap[currIndex];
 			Elem_t& par = _heap[parentIndex];
 			if (_cmpFunc(par, curr)) {           //par > curr 
@@ -42,12 +42,12 @@ private:
 			}
 		}
 	}
-	void _sink(int index) {
-		int currIndex = index;
+	void _sink(size_t index) {
+		size_t currIndex = index;
 		while (currIndex != _lastIndex()) {
-			int lsindex = _leftSon(currIndex);
-			int rsindex = _rightSon(currIndex);
-			int toSwapIndex = currIndex;
+			size_t lsindex = _leftSon(currIndex);
+			size_t rsindex = _rightSon(currIndex);
+			size_t toSwapIndex = currIndex;
 
 			//找左右儿子中更大/小的那个
 			if (lsindex <= _lastIndex() && _cmpFunc(_heap[currIndex], _heap[lsindex])) {	  //判断是否有左儿子        
@@ -70,7 +70,7 @@ private:
 
 public:
 	Heap() {}
-	Heap(int initCapacity) {
+	Heap(size_t initCapacity) {
 		reserve(initCapacity);
 	}
 
@@ -78,10 +78,10 @@ public:
 		_heap.reserve(newCapacity);
 	}
 
-	int size() {
+	size_t size() {
 		return _heap.size();
 	}
-	int capacity() {
+	size_t capacity() {
 		return _heap.capacity();
 	}
 	const Elem_t& top() {

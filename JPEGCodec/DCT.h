@@ -1,6 +1,7 @@
 #pragma once
 #ifndef DCT_h__
 #define DCT_h__
+#define _CRT_SECURE_NO_WARNINGS
 #include <array>
 #include "typedef.h"
 

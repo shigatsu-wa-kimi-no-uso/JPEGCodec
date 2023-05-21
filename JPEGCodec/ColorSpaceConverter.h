@@ -5,6 +5,7 @@
 #pragma once
 #ifndef ColorSpaceConverter_h__
 #define ColorSpaceConverter_h__
+#define _CRT_SECURE_NO_WARNINGS
 #include "typedef.h"
 
 class ColorSpaceConverter

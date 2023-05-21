@@ -22,3 +22,6 @@ BYTE Quantizer::_std_qtable_C[8][8] = {
 	99,99,99,99,99,99,99,99
 };
 
+BYTE Quantizer::_user_qtable_Y[8][8];
+
+BYTE Quantizer::_user_qtable_C[8][8];

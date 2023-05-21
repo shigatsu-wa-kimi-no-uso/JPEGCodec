@@ -3,17 +3,73 @@
 * Written by kiminouso, 2023/04/06
 */
 #include "CodingUtil.h"
-#include "typedef.h"
+#include "UtilFunc.h"
 
-int DPCM::pred=0;
 
-DWORD RLE::_zigzag[8][8] = {
-		0,1,5,6,14,15,27,28,
-		2,4,7,13,16,26,29,42,
-		3,8,12,17,25,30,41,43,
-		9,11,18,24,31,40,44,53,
-		10,19,23,32,39,45,52,54,
-		20,22,33,38,46,51,55,60,
-		21,34,37,47,50,56,59,61,
-		35,36,48,49,57,58,62,63
-	};
+void RLE::getRLECodes(const Block* block, RLECode* codeBuf, int* count){
+	int zeroCnt = 0;
+	int zigzagged[BLOCK_COLCNT * BLOCK_ROWCNT];
+	getZigzaggedSequence((float*)*block, zigzagged);
+#ifdef TRACE
+	printf("zigzagged:\n");
+	for (int i = 0; i < 64; ++i) {
+		printf("%d ", zigzagged[i]);
+	}
+	putchar('\n');
+#endif
+	int codePos = 0;
+	//ÕÒµ½EOBµÄÎ»ÖÃ
+	int EOBPos;
+	for (EOBPos = BLOCK_COLCNT * BLOCK_ROWCNT - 1; EOBPos >= 0; --EOBPos) {
+		if (zigzagged[EOBPos] != 0) {
+			EOBPos++;
+			break;
+		}
+	}
+	//RLE
+	for (int i = 1; i < EOBPos; ++i) {
+		int curr = zigzagged[i];
+		if (zeroCnt != 15 && curr == 0) {
+			zeroCnt++;
+		} else {
+			codeBuf[codePos].zeroCnt = zeroCnt;
+			codeBuf[codePos].value = curr;
+			codePos++;
+			zeroCnt = 0;
+		}
+	}
+	if (EOBPos != BLOCK_COLCNT * BLOCK_ROWCNT) {
+		codeBuf[codePos].zeroCnt = 0;
+		codeBuf[codePos].value = 0;
+		codePos++;
+	}
+	*count = codePos;
+}
+
+BitString BitEncoder::getBitString(int val){
+	if (val < 0) {
+		val = -val;
+		BitString bitString(val);
+		bitString = ~bitString;
+		return bitString;
+	}
+	return BitString(val);
+}
+
+BYTE BitEncoder::mergeToByte(int high4, int low4){
+	return ((0xF0 & (BYTE)(high4 << 4)) | (0x0F & (BYTE)low4));
+}
+
+DPCM::DPCM() :pred(0){
+
+}
+
+void DPCM::reset(){
+	pred = 0;
+}
+
+int DPCM::nextDiff(int val){
+	int res = val - pred;
+	pred = val;
+	return res;
+}

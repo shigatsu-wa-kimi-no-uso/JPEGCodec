@@ -46,7 +46,7 @@ DWORD DCTBlockSplitter::getCrBlockCount()
 void DCTBlockSplitter::_split(const Matrix<float>* matrix,const DWORD blockcnt_h,const DWORD blockcnt_v,const DWORD matrix_extracol_cnt,const DWORD matrix_extrarow_cnt, Matrix<float>* dctblock)
 {
 	DWORD blockRSel = 0, blockCSel = 0, matpos_r, matpos_c, blockIndex = 0;
-	int r, c;
+	DWORD r, c;
 	for (blockRSel = 0; blockRSel < blockcnt_v; ++blockRSel) {
 		for (blockCSel = 0; blockCSel < blockcnt_h; ++blockCSel) {
 			for (r = 0; r < dctblock_rowcnt; ++r) {
