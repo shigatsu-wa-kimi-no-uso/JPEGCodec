@@ -9,43 +9,39 @@
 #include "DCT.h"
 #include "IntHuffman.h"
 #include "JPEGFileBuilder.h"
+#include "UtilFunc.h"
 
 Encoder::SymbolTable::SymbolTable(int entryCount) :
 	_freqMap(new size_t[entryCount]{ 0 }),
 	_codeMap(new BitString[entryCount]),
-	_count(entryCount)
-{
+	_count(entryCount){}
 
-}
-
-const int Encoder::SymbolTable::count() const
-{
+const int Encoder::SymbolTable::count() const{
 	return _count;
 }
 
-size_t& Encoder::SymbolTable::frequency(const int symbol) const
-{
+size_t& Encoder::SymbolTable::frequency(const int symbol) const{
 	return _freqMap[symbol];
 }
 
-BitString& Encoder::SymbolTable::code(const int symbol) const
-{
+BitString& Encoder::SymbolTable::code(const int symbol){
 	return _codeMap[symbol];
 }
 
-size_t* Encoder::SymbolTable::frequencyMapPtr() const
-{
+const BitString& Encoder::SymbolTable::code(const int symbol) const{
+	return _codeMap[symbol];
+}
+
+size_t* Encoder::SymbolTable::frequencyMapPtr() const{
 	return _freqMap;
 }
 
-Encoder::SymbolTable::~SymbolTable()
-{
+Encoder::SymbolTable::~SymbolTable(){
 	delete[] _freqMap;
 	delete[] _codeMap;
 }
 
-void Encoder::_makeBoundaryMCU(const Matrix<YCbCr>& ycbcrData, MCU& mcu, int pos_x, int pos_y)
-{
+void Encoder::_makeBoundaryMCU(const Matrix<YCbCr>& ycbcrData, MCU& mcu, int pos_x, int pos_y){
 	int stride_r = _subsampFact.factor_v;
 	int stride_c = _subsampFact.factor_h;
 	int row_cnt = BLOCK_ROWCNT * stride_r;
@@ -55,8 +51,8 @@ void Encoder::_makeBoundaryMCU(const Matrix<YCbCr>& ycbcrData, MCU& mcu, int pos
 
 	//写入Y
 	for (int r = 0; r < row_cnt; ++r) {
+		int imgpos_y = pos_y + r >= imgbound_row ? imgbound_row - 1 : pos_y + r;
 		for (int c = 0; c < col_cnt; ++c) {
-			int imgpos_y = pos_y + r >= imgbound_row ? imgbound_row - 1 : pos_y + r;
 			int imgpos_x = pos_x + c >= imgbound_col ? imgbound_col - 1 : pos_x + c;
 			int y_blockSel = stride_c * (r / BLOCK_ROWCNT) + c / BLOCK_ROWCNT;
 			int y_unitSel_r = r % BLOCK_ROWCNT;
@@ -66,8 +62,8 @@ void Encoder::_makeBoundaryMCU(const Matrix<YCbCr>& ycbcrData, MCU& mcu, int pos
 	}
 	//写入CbCr
 	for (int r = 0; r < row_cnt; r += stride_r) {
+		int imgpos_y = pos_y + r >= imgbound_row ? imgbound_row - 1 : pos_y + r;
 		for (int c = 0; c < col_cnt; c += stride_c) {
-			int imgpos_y = pos_y + r >= imgbound_row ? imgbound_row - 1 : pos_y + r;
 			int imgpos_x = pos_x + c >= imgbound_col ? imgbound_col - 1 : pos_x + c;
 			mcu.cb[0][r / stride_r][c / stride_c] = ycbcrData[imgpos_y][imgpos_x].Cb;
 			mcu.cr[0][r / stride_r][c / stride_c] = ycbcrData[imgpos_y][imgpos_x].Cr;
@@ -75,51 +71,48 @@ void Encoder::_makeBoundaryMCU(const Matrix<YCbCr>& ycbcrData, MCU& mcu, int pos
 	}
 }
 
-void Encoder::_allocMCU(MCU* pMCU)
-{
+void Encoder::_allocMCU(MCU& mcu){
 	int stride_r = _subsampFact.factor_v;
 	int stride_c = _subsampFact.factor_h;
-	pMCU->y = new Block * [stride_r * stride_c];
+	mcu.y = new Block * [stride_r * stride_c];
 	for (int i = 0; i < stride_r * stride_c; ++i) {
-		pMCU->y[i] = new Block[1];
+		mcu.y[i] = new Block[1];
 	}
-	pMCU->cb = new Block[1];
-	pMCU->cr = new Block[1];
+	mcu.cb = new Block[1];
+	mcu.cr = new Block[1];
 }
 
-void Encoder::_deallocMCU(MCU* pMCU)
-{
+void Encoder::_deallocMCU(MCU& mcu){
 	int stride_r = _subsampFact.factor_v;
 	int stride_c = _subsampFact.factor_h;
 	for (int i = 0; i < stride_r * stride_c; ++i) {
-		delete[] pMCU->y[i];
+		delete[] mcu.y[i];
 	}
-	delete[] pMCU->y;
-	delete[] pMCU->cb;
-	delete[] pMCU->cr;
+	delete[] mcu.y;
+	delete[] mcu.cb;
+	delete[] mcu.cr;
 }
 
-void Encoder::_makeOneMCU(const Matrix<YCbCr>& ycbcrData, MCU& mcu, int pos_x, int pos_y)
-{
+void Encoder::_makeOneMCU(const Matrix<YCbCr>& ycbcrData, MCU& mcu, int pos_x, int pos_y){
 	int stride_r = _subsampFact.factor_v;
 	int stride_c = _subsampFact.factor_h;
 	int row_cnt = BLOCK_ROWCNT * stride_r;
 	int col_cnt = BLOCK_COLCNT * stride_c;
 	//写入Y
 	for (int r = 0; r < row_cnt; ++r) {
+		int imgpos_y = pos_y + r;
+		int y_unitSel_r = r % BLOCK_ROWCNT;
 		for (int c = 0; c < col_cnt; ++c) {
-			int imgpos_y = pos_y + r;
 			int imgpos_x = pos_x + c;
 			int y_blockSel = stride_c * (r / BLOCK_ROWCNT) + c / BLOCK_ROWCNT;
-			int y_unitSel_r = r % BLOCK_ROWCNT;
 			int y_unitSel_c = c % BLOCK_COLCNT;
 			mcu.y[y_blockSel][0][y_unitSel_r][y_unitSel_c] = ycbcrData[imgpos_y][imgpos_x].Y;
 		}
 	}
 	//写入CbCr
 	for (int r = 0; r < row_cnt; r += stride_r) {
+		int imgpos_y = pos_y + r;
 		for (int c = 0; c < col_cnt; c += stride_c) {
-			int imgpos_y = pos_y + r;
 			int imgpos_x = pos_x + c;
 			mcu.cb[0][r / stride_r][c / stride_c] = ycbcrData[imgpos_y][imgpos_x].Cb;
 			mcu.cr[0][r / stride_r][c / stride_c] = ycbcrData[imgpos_y][imgpos_x].Cr;
@@ -127,41 +120,52 @@ void Encoder::_makeOneMCU(const Matrix<YCbCr>& ycbcrData, MCU& mcu, int pos_x, i
 	}
 }
 
-void Encoder::_updateMCU(MCU* pOldMCU, MCU* pNewMCU)
-{
-	MCU* mcu = pOldMCU;
-	_deallocMCU(mcu);
-	/*
-	for (int i = 0; i < _subsampFact.factor_v; ++i) {
-		for (int j = 0; j < _subsampFact.factor_h; ++j) {
-			mcu->y[i * _subsampFact.factor_h + j] = pNewMCU->y[i * _subsampFact.factor_h + j];
-		}
-	}*/
-	mcu->y = pNewMCU->y;
-	mcu->cb = pNewMCU->cb;
-	mcu->cr = pNewMCU->cr;
+void Encoder::_updateMCU(MCU& oldMCU, MCU& newMCU){
+	MCU& mcu = oldMCU;
+	_deallocMCU(oldMCU);
+	mcu.y = newMCU.y;
+	mcu.cb = newMCU.cb;
+	mcu.cr = newMCU.cr;
 }
 
-void Encoder::_bitEncodeOneBlock(const Block* input, BitCodeArray& output, DPCM& dpcmEncoder)
-{
-	RLECode RLEcodeBuf[256];
+//对每个值减去128以便进行FDCT操作
+
+void Encoder::_lshift128(Block& block) {
+	for (int r = 0; r < BLOCK_ROWCNT; ++r) {
+		for (int c = 0; c < BLOCK_COLCNT; ++c) {
+			block[r][c] -= 128;
+		}
+	}
+}
+
+void Encoder::_bitEncodeOneBlock(const Block& input, BitCodeArray& output, DPCM& dpcmEncoder){
+	RLCode codeBuf[256];
 	//问题: 跨越不同类型的Block(如Y到Cb)时,差分编码是否需要重置?
-	int DCDiff = dpcmEncoder.nextDiff((int)(*input)[0][0]);
-	RLEcodeBuf[0].zeroCnt = 0;
-	RLEcodeBuf[0].value = DCDiff;
+	int DCDiff = dpcmEncoder.nextDiff((int)input[0][0]);
+	codeBuf[0].zeroCnt = 0;
+	codeBuf[0].value = DCDiff;
 	int count = 0;
-	RLE::getRLECodes(input, &RLEcodeBuf[1], &count);
+	int zigzagged[BLOCK_COLCNT * BLOCK_ROWCNT];
+	getZigzaggedSequence(input, zigzagged);
+#ifdef TRACE
+	printf("zigzagged:\n");
+	for (int i = 0; i < 64; ++i) {
+		printf("%d ", zigzagged[i]);
+	}
+	putchar('\n');
+#endif
+	RunLengthCodec::encode(&zigzagged[1], BLOCK_COLCNT * BLOCK_ROWCNT - 1, &codeBuf[1], &count);
 	count++;
 	for (int i = 0; i < count; ++i) {
-		BitString bitString = BitEncoder::getBitString(RLEcodeBuf[i].value);
+		BitString bitString = BitCodec::getBitString(codeBuf[i].value);
 		BitCode bitCode;
-		bitCode.zeroCnt = RLEcodeBuf[i].zeroCnt;
-		bitCode.bits = bitString.value();
+		bitCode.zeroCnt = codeBuf[i].zeroCnt;
+		bitCode.bits = bitString.value();	//为EOB时,bits是空的(长度为0)
 		bitCode.bitLength = bitString.length();
 		output.push_back(bitCode);
 	}
 #ifdef TRACE
-	printf("RLE:\n");
+	printf("RunLengthCodec:\n");
 	for (int i = 0; i < count; ++i) {
 		printf("(%d, %d, ", output[i].zeroCnt, output[i].bitLength);
 		std::cout << RLEcodeBuf[i].value << ", " << BitEncoder::getBitString(RLEcodeBuf[i].value) << ")";
@@ -202,29 +206,24 @@ void Encoder::_countFrequency(const Matrix<BitCodeUnit>& bitCodeMatrix, SymbolTa
 	}
 }
 
-void Encoder::_bitEncodeOneMCU(MCU* mcu, BitCodeUnit& codeUnit)
+void Encoder::_bitEncodeOneMCU(const MCU& mcu, BitCodeUnit& codeUnit)
 {
-	Block* input;
 	int i, j;
 	codeUnit.y.resize(_subsampFact.factor_v * _subsampFact.factor_h);
 	for (i = 0; i < _subsampFact.factor_v; ++i) {
 		for (j = 0; j < _subsampFact.factor_h; ++j) {
-			input = mcu->y[i * _subsampFact.factor_h + j];
-			_bitEncodeOneBlock(input, codeUnit.y[i * _subsampFact.factor_h + j], _dpcmEncoders[0]);
+			_bitEncodeOneBlock(*mcu.y[i * _subsampFact.factor_h + j], codeUnit.y[i * _subsampFact.factor_h + j], _dpcmEncoders[0]);
 		}
 	}
-	input = mcu->cb;
-	_bitEncodeOneBlock(input, codeUnit.cb, _dpcmEncoders[1]);
-	input = mcu->cr;
-	_bitEncodeOneBlock(input, codeUnit.cr, _dpcmEncoders[2]);
+	_bitEncodeOneBlock(*mcu.cb, codeUnit.cb, _dpcmEncoders[1]);
+	_bitEncodeOneBlock(*mcu.cr, codeUnit.cr, _dpcmEncoders[2]);
 }
 
 void Encoder::_bitEncode(Matrix<BitCodeUnit>& bitCodeMatrix)
 {
 	for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
 		for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
-			MCU* mcu = &(*_MCUs)[r][c];
-			_bitEncodeOneMCU(mcu, bitCodeMatrix[r][c]);
+			_bitEncodeOneMCU((*_MCUs)[r][c], bitCodeMatrix[r][c]);
 		}
 	}
 }
@@ -292,7 +291,7 @@ void Encoder::_removeReservedSymbol(HuffmanTable& table)
 	table[i].pop_back();
 }
 
-void Encoder::_printHuffmanTable(SymbolTable& symbolTable, HuffmanTable& table, const char* description)
+void Encoder::_printHuffmanTable(const SymbolTable& symbolTable,const HuffmanTable& table, const char* description)
 {
 	printf("%s\n", description);
 	printf("%8s%5s%18s\n", "symbol", "freq", "code");
@@ -319,7 +318,7 @@ void Encoder::_printHuffmanTable(SymbolTable& symbolTable, HuffmanTable& table, 
 	putchar('\n');
 }
 
-void Encoder::_huffmanEncode(Matrix<BitCodeUnit>& bitCodeMatrix, std::vector<BYTE>& output)
+void Encoder::_huffmanEncode(const Matrix<BitCodeUnit>& bitCodeMatrix, std::vector<BYTE>& output)
 {
 	SymbolTable table_Y_DC(257);
 	SymbolTable table_Y_AC(257);
@@ -337,11 +336,13 @@ void Encoder::_huffmanEncode(Matrix<BitCodeUnit>& bitCodeMatrix, std::vector<BYT
 	_generateHuffmanTable(table_Y_AC, _huffTable_Y_AC);
 	_generateHuffmanTable(table_CbCr_DC, _huffTable_CbCr_DC);
 	_generateHuffmanTable(table_CbCr_AC, _huffTable_CbCr_AC);
+#ifdef DEBUG
 	_printHuffmanTable(table_Y_DC, _huffTable_Y_DC, "Y_DC");
 	_printHuffmanTable(table_Y_AC, _huffTable_Y_AC, "Y_AC");
 	_printHuffmanTable(table_CbCr_DC, _huffTable_CbCr_DC, "CbCr_DC");
 	_printHuffmanTable(table_CbCr_AC, _huffTable_CbCr_AC, "CbCr_AC");
-	//删除前面补充的值为'256'的符号,后续向jpeg文件中写入的哈夫曼表应当时没有补点的
+#endif
+	//删除前面补充的值为'256'的符号,后续向jpeg文件中写入的哈夫曼表应当是没有补点的
 	_removeReservedSymbol(_huffTable_Y_DC);
 	_removeReservedSymbol(_huffTable_Y_AC);
 	_removeReservedSymbol(_huffTable_CbCr_DC);
@@ -360,7 +361,7 @@ void Encoder::_huffmanEncode(Matrix<BitCodeUnit>& bitCodeMatrix, std::vector<BYT
 	writer.fillIncompleteByteWithOne();
 }
 
-void Encoder::makeMCUs(Matrix<YCbCr>& ycbcrData, SubsampFact subsampFact)
+void Encoder::makeMCUs(const Matrix<YCbCr>& ycbcrData,const SubsampFact subsampFact)
 {
 	_subsampFact = subsampFact;
 	_width = (WORD)ycbcrData.column_cnt;
@@ -373,49 +374,41 @@ void Encoder::makeMCUs(Matrix<YCbCr>& ycbcrData, SubsampFact subsampFact)
 	int r, c;
 	for (r = 0; r < mcus_row - 1; ++r) {
 		for (c = 0; c < mcus_col - 1; ++c) {
-			_allocMCU(&(*_MCUs)[r][c]);
+			_allocMCU((*_MCUs)[r][c]);
 			_makeOneMCU(ycbcrData, (*_MCUs)[r][c], c * mcu_colUnitCnt, r * mcu_rowUnitCnt);
 		}
-		_allocMCU(&(*_MCUs)[r][c]);
+		_allocMCU((*_MCUs)[r][c]);
 		_makeBoundaryMCU(ycbcrData, (*_MCUs)[r][c], c * mcu_colUnitCnt, r * mcu_rowUnitCnt);
 	}
 	for (c = 0; c < mcus_col; ++c) {
-		_allocMCU(&(*_MCUs)[r][c]);
+		_allocMCU((*_MCUs)[r][c]);
 		_makeBoundaryMCU(ycbcrData, (*_MCUs)[r][c], c * mcu_colUnitCnt, r * mcu_rowUnitCnt);
 	}
 }
 
 void Encoder::doFDCT()
 {
-	MCU* mcu;
-	MCU* newMCU;
-	Block* input;
-	Block* output;
 	for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
 		for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
 			//在MCU矩阵中选择一个MCU, 并分配新的MCU
-			mcu = &(*_MCUs)[r][c];
-			newMCU = new MCU;
+			MCU& mcu = (*_MCUs)[r][c];
+			MCU newMCU;
 			_allocMCU(newMCU);
 			//对Y块进行FDCT
 			for (DWORD i = 0; i < _subsampFact.factor_v; ++i) {
 				for (DWORD j = 0; j < _subsampFact.factor_h; ++j) {
-					input = mcu->y[i * _subsampFact.factor_h + j];
-					output = newMCU->y[i * _subsampFact.factor_h + j];
+					Block& input = *mcu.y[i * _subsampFact.factor_h + j];
+					Block& output = *newMCU.y[i * _subsampFact.factor_h + j];
 					_lshift128(input);
 					DCT::forwardDCT(input, output);
 				}
 			}
 			//对Cb,Cr块进行FDCT
-			input = mcu->cb;
-			output = newMCU->cb;
-			_lshift128(input);
-			DCT::forwardDCT(input, output);
+			_lshift128(*mcu.cb);
+			DCT::forwardDCT(*mcu.cb, *newMCU.cb);
 
-			input = mcu->cr;
-			output = newMCU->cr;
-			_lshift128(input);
-			DCT::forwardDCT(input, output);
+			_lshift128(*mcu.cr);
+			DCT::forwardDCT(*mcu.cr, *newMCU.cr);
 
 			//更新到MCU矩阵
 			_updateMCU(mcu, newMCU);
@@ -423,28 +416,21 @@ void Encoder::doFDCT()
 	}
 }
 
-void Encoder::doQuantize(float qualityFactor)
+void Encoder::quantize(float qualityFactor)
 {
-	MCU* mcu;
-	Block* input;
-	Block* output;
 	Quantizer::generateUserTable(qualityFactor);
 	for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
 		for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
-			mcu = &(*_MCUs)[r][c];
+			MCU& mcu = (*_MCUs)[r][c];
 			for (DWORD i = 0; i < _subsampFact.factor_v; ++i) {
 				for (DWORD j = 0; j < _subsampFact.factor_h; ++j) {
-					input = mcu->y[i * _subsampFact.factor_h + j];
-					output = input;
-					Quantizer::quantize(input, output, Quantizer::STD_QTABLE_LUMA);
+					Block& input = *mcu.y[i * _subsampFact.factor_h + j];
+					Block& output = input;
+					Quantizer::quantize(input, Quantizer::STD_QTABLE_LUMA, output);
 				}
 			}
-			input = mcu->cb;
-			output = input;
-			Quantizer::quantize(input, output, Quantizer::STD_QTABLE_CHROMA);
-			input = mcu->cr;
-			output = input;
-			Quantizer::quantize(input, output, Quantizer::STD_QTABLE_CHROMA);
+			Quantizer::quantize(*mcu.cb, Quantizer::STD_QTABLE_CHROMA, *mcu.cb);
+			Quantizer::quantize(*mcu.cr, Quantizer::STD_QTABLE_CHROMA, *mcu.cr);
 		}
 	}
 }

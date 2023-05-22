@@ -8,25 +8,28 @@
 #include "typedef.h"
 #include "BitString.h"
 
-class BitEncoder {
+class BitCodec {
 public:
 	static BitString getBitString(int val);
 	static BYTE mergeToByte(int high4, int low4);
+	static int getValue(const BitString& bitString);
 };
 
-class RLE {
+class RunLengthCodec {
 public:
-	static void getRLECodes(const Block* block, RLECode* codeBuf,int* count);
+	static void encode(const int* seq, const int seqLen, RLCode* codeBuf, int* count);
+	static void decode(const RLCode* codes, const int codeCnt, const int seqLength, int* seqBuf);
 };
 
 class DPCM
 {
 private:
-	int pred;
+	int _preVal;
 public:
 	DPCM();
 	void reset();
 	int nextDiff(int val);
+	int nextVal(int diff);
 };
 
 #endif // CodingUtil_h__

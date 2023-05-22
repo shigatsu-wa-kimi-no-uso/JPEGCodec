@@ -14,7 +14,7 @@
 class JPEGFileBuilder
 {
 private:
-	std::vector<std::pair<const BYTE, const BYTE*>> _quantTables;
+	std::vector<std::pair<const BYTE, const BYTE(*)[BLOCK_ROWCNT][BLOCK_COLCNT]>> _quantTables;
 	std::vector<std::tuple<const BYTE, const HuffmanTable, const HTableType>> _huffTables;
 	BYTE _cmptAdoptedHTable[(int)Component::MAXENUMVAL][(int)HTableType::MAXENUMVAL]{};
 	FILE* _hFile{};
@@ -26,7 +26,7 @@ private:
 
 	void _writeJFIFHeader();
 
-	void _writeQuantTable(const BYTE id, const BYTE* quantTable);
+	void _writeQuantTable(const BYTE id, const BYTE(&quantTable)[BLOCK_ROWCNT][BLOCK_COLCNT]);
 
 	void _writeFrameHeader();
 
@@ -39,7 +39,7 @@ private:
 public:
 	JPEGFileBuilder();
 
-	JPEGFileBuilder& setQuantTable(const BYTE id,const BYTE* quantTable);
+	JPEGFileBuilder& setQuantTable(const BYTE id,const BYTE (*quantTable)[BLOCK_ROWCNT][BLOCK_COLCNT]);
 
 	JPEGFileBuilder& setHuffmanTable(const BYTE id,const HuffmanTable huffTable,const HTableType type);
 

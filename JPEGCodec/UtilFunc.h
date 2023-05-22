@@ -9,10 +9,8 @@
 #include "typedef.h"
 #pragma comment(lib,"ws2_32.lib")
 
-
-
 template<typename Tx, typename Ty>
-inline void getZigzaggedSequence(const Tx* seq, Ty(&zigzaggedSeq)[BLOCK_COLCNT * BLOCK_ROWCNT]) {
+inline void getZigzaggedSequence(const Tx (&seq)[BLOCK_ROWCNT][BLOCK_COLCNT], Ty(&zigzaggedSeq)[BLOCK_COLCNT * BLOCK_ROWCNT]) {
 	static DWORD zigzag[8][8] = {
 			0,1,5,6,14,15,27,28,
 			2,4,7,13,16,26,29,42,
@@ -25,7 +23,7 @@ inline void getZigzaggedSequence(const Tx* seq, Ty(&zigzaggedSeq)[BLOCK_COLCNT *
 	};
 	for (DWORD r = 0; r < BLOCK_ROWCNT; ++r) {
 		for (DWORD c = 0; c < BLOCK_COLCNT; ++c) {
-			zigzaggedSeq[zigzag[r][c]] = seq[r * BLOCK_COLCNT + c];
+			zigzaggedSeq[zigzag[r][c]] = seq[r][c];
 		}
 	}
 }
@@ -73,7 +71,6 @@ inline int myround(float val) {
 		return intval;
 	}
 }
-
 
 
 #endif // UtilFunc_h__

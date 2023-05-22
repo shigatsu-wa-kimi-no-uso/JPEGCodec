@@ -135,26 +135,27 @@
   <ItemGroup>
     <ClCompile Include="BitWriter.cpp" />
     <ClCompile Include="BitWriter.h" />
-    <ClCompile Include="BMPFile.cpp" />
+    <ClCompile Include="BMPFileLoader.cpp" />
+    <ClCompile Include="Decoder.cpp" />
     <ClCompile Include="Encoder.cpp" />
+    <ClCompile Include="IntHuffman.cpp" />
     <ClCompile Include="JPEGFileBuilder.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="CodingUtil.cpp" />
     <ClCompile Include="DCT.cpp" />
-    <ClCompile Include="DCTBlockSplitter.cpp" />
     <ClCompile Include="ColorSpaceConverter.cpp" />
-    <ClCompile Include="Downsampler.cpp" />
     <ClCompile Include="Quantizer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BitReader.h" />
     <ClInclude Include="BitString.h" />
-    <ClInclude Include="BMPFile.h" />
+    <ClInclude Include="BMPFileBuilder.h" />
+    <ClInclude Include="BMPFileLoader.h" />
+    <ClInclude Include="Decoder.h" />
     <ClInclude Include="Encoder.h" />
     <ClInclude Include="CodingUtil.h" />
     <ClInclude Include="DCT.h" />
-    <ClInclude Include="DCTBlockSplitter.h" />
     <ClInclude Include="ColorSpaceConverter.h" />
-    <ClInclude Include="Downsampler.h" />
     <ClInclude Include="Heap.h" />
     <ClInclude Include="IntHuffman.h" />
     <ClInclude Include="JPEGFileBuilder.h" />

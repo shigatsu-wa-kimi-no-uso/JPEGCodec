@@ -11,6 +11,8 @@
 #include "CodingUtil.h"
 #include "BitWriter.h"
 
+#define DEBUG
+
 class Encoder {
 private:
 	class SymbolTable {
@@ -22,32 +24,13 @@ private:
 		SymbolTable(int entryCount);
 		const int count() const;
 		size_t& frequency(const int symbol) const;
-		BitString& code(const int symbol) const;
+		BitString& code(const int symbol);
+		const BitString& code(const int symbol) const;
 		size_t* frequencyMapPtr() const;
 		~SymbolTable();
 	};
 
-	struct BitCode {
-		union {
-			struct {
-				BYTE bitLength : 4;
-				BYTE zeroCnt : 4;
-			};
-			BYTE codedUnit;
-		};
-		DWORD bits;
-	};
 
-	using BitCodeArray = std::vector<BitCode>;
-
-	struct BitCodeUnit {
-		std::vector<BitCodeArray> y;
-		BitCodeArray cb;
-		BitCodeArray cr;
-	};
-
-
-	SubsampFact _subsampFact{};
 
 	/*MCU的结构:
 	* 在图像中的结构:
@@ -102,39 +85,38 @@ private:
 	HuffmanTable  _huffTable_CbCr_AC;
 	WORD _width{};
 	WORD _height{};
+	SubsampFact _subsampFact{};
 
 	std::vector<BYTE> _codedBytes;
 
 	void _makeBoundaryMCU(const Matrix<YCbCr>& ycbcrData, MCU& mcu, int pos_x, int pos_y);
 
 	//分配一块MCU
-	void _allocMCU(MCU* pMCU);
+	void _allocMCU(MCU& mcu);
 
-	void _deallocMCU(MCU* pMCU);
+	void _deallocMCU(MCU& mcu);
+
+	//注意:更新MCU矩阵时采用浅拷贝
+	void _updateMCU(MCU& oldMCU, MCU& newMCU);
 
 	void _makeOneMCU(const Matrix<YCbCr>& ycbcrData, MCU& mcu, int pos_x, int pos_y);
 
-	//注意:更新MCU矩阵时采用浅拷贝
-	void _updateMCU(MCU* pOldMCU,MCU* pNewMCU);
-
 	//对每个值减去128以便进行FDCT操作
-	void _lshift128(Block* block) {
-		for (int r = 0; r < BLOCK_ROWCNT; ++r) {
-			for (int c = 0; c < BLOCK_COLCNT; ++c) {
-				(*block)[r][c] -= 128;
-			}
-		}
-	}
+	void _lshift128(Block& block);
 
 	//差分编码&游程编码
 	//返回一个包装好的BitEncode结果数组BitCodeArray
-	void _bitEncodeOneBlock(const Block* input, BitCodeArray& output,DPCM& dpcmEncoder);
+	void _bitEncodeOneBlock(const Block& input, BitCodeArray& output,DPCM& dpcmEncoder);
 
 	//计算一个BitCodeArray所产生的CodedUnit符号的频数,一个BitCodeArray与一个block对应
 	void _accumulateFrequency(const BitCodeArray& input, SymbolTable& tbl_DC,SymbolTable& tbl_AC);
 
 	//计算一个MCU所产生的CodedUnit符号的频数,MCU所产生的BitCodeArray被封装在了BitCodeUnit中
-	void _countOneUnitFreq(const BitCodeUnit& bitCodeUnit, SymbolTable& tbl_Y_DC, SymbolTable& tbl_Y_AC, SymbolTable& tbl_CbCr_DC, SymbolTable& tbl_CbCr_AC);
+	void _countOneUnitFreq(const BitCodeUnit& bitCodeUnit,
+		SymbolTable& tbl_Y_DC,
+		SymbolTable& tbl_Y_AC, 
+		SymbolTable& tbl_CbCr_DC,
+		SymbolTable& tbl_CbCr_AC);
 
 	//计算所有MCU产生的CodedUnit符号的频数,以供生成huffman树
 	void _countFrequency(
@@ -146,7 +128,7 @@ private:
 
 	//先Y,再Cb,再Cr
 	//如果采样因子非1:1,则Y的块有多个,在一个MCU中从左往右从上到下遍历处理
-	void _bitEncodeOneMCU(MCU* mcu, BitCodeUnit& codeUnit);
+	void _bitEncodeOneMCU(const MCU& mcu, BitCodeUnit& codeUnit);
 
 	//对每个MCU进行差分编码及游程编码,并得到合并字节后的结果
 	void _bitEncode(Matrix<BitCodeUnit>& bitCodeMatrix);
@@ -155,7 +137,10 @@ private:
 	void _generateHuffmanTable(SymbolTable& symbolTable,HuffmanTable& huffTable);
 
 
-	void _huffmanEncodeOneBlock(const BitCodeArray& bitCodes, const SymbolTable& tbl_DC, const SymbolTable& tbl_AC,BitWriter& writer);
+	void _huffmanEncodeOneBlock(const BitCodeArray& bitCodes,
+		const SymbolTable& tbl_DC,
+		const SymbolTable& tbl_AC,
+		BitWriter& writer);
 
 	void _huffmanEncodeOneUnit(
 		const BitCodeUnit& bitCodeUnit,
@@ -169,17 +154,16 @@ private:
 
 	void _removeReservedSymbol(HuffmanTable& table);
 
-	void _printHuffmanTable(SymbolTable& symbolTable,HuffmanTable& table,const char* description);
+	void _printHuffmanTable(const SymbolTable& symbolTable,const HuffmanTable& table,const char* description);
 
-	void _huffmanEncode(Matrix<BitCodeUnit>& bitCodeMatrix, std::vector<BYTE>& output);
+	void _huffmanEncode(const Matrix<BitCodeUnit>& bitCodeMatrix, std::vector<BYTE>& output);
 
 public:
-
-	void makeMCUs(Matrix<YCbCr>& ycbcrData, SubsampFact subsampFact);
+	void makeMCUs(const Matrix<YCbCr>& ycbcrData,const SubsampFact subsampFact);
 
 	void doFDCT();
 
-	void doQuantize(float qualityFactor);
+	void quantize(float qualityFactor);
 
 	//过程:
 	//DC分量差分编码 -->-+

@@ -3,17 +3,14 @@
 #include<ostream>
 #include"typedef.h"
 
-
-#define DEBUG
-
 class BitString {
 private:
 	union {
 		BYTE _byte[4];
 		DWORD _bits;
 	};
-
 	int _length;
+
 #ifdef DEBUG
 	void _testOutOfBound(int index) const {
 		assert(index >= 0 && index < _length);

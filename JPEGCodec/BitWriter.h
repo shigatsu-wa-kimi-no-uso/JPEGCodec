@@ -20,6 +20,7 @@ private:
 	}
 public:
 	BitWriter(std::vector<BYTE>& data);
+
 	BitWriter(const BitWriter& src);
 
 	//先写高位再写低位

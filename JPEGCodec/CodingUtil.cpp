@@ -6,29 +6,20 @@
 #include "UtilFunc.h"
 
 
-void RLE::getRLECodes(const Block* block, RLECode* codeBuf, int* count){
+void RunLengthCodec::encode(const int* seq,const int seqLen, RLCode* codeBuf, int* count){
 	int zeroCnt = 0;
-	int zigzagged[BLOCK_COLCNT * BLOCK_ROWCNT];
-	getZigzaggedSequence((float*)*block, zigzagged);
-#ifdef TRACE
-	printf("zigzagged:\n");
-	for (int i = 0; i < 64; ++i) {
-		printf("%d ", zigzagged[i]);
-	}
-	putchar('\n');
-#endif
 	int codePos = 0;
 	//找到EOB的位置
 	int EOBPos;
-	for (EOBPos = BLOCK_COLCNT * BLOCK_ROWCNT - 1; EOBPos >= 0; --EOBPos) {
-		if (zigzagged[EOBPos] != 0) {
+	for (EOBPos = seqLen - 1; EOBPos >= 0; --EOBPos) {
+		if (seq[EOBPos] != 0) {
 			EOBPos++;
 			break;
 		}
 	}
 	//RLE
-	for (int i = 1; i < EOBPos; ++i) {
-		int curr = zigzagged[i];
+	for (int i = 0; i < EOBPos; ++i) {
+		int curr = seq[i];
 		if (zeroCnt != 15 && curr == 0) {
 			zeroCnt++;
 		} else {
@@ -38,7 +29,7 @@ void RLE::getRLECodes(const Block* block, RLECode* codeBuf, int* count){
 			zeroCnt = 0;
 		}
 	}
-	if (EOBPos != BLOCK_COLCNT * BLOCK_ROWCNT) {
+	if (EOBPos != seqLen) {
 		codeBuf[codePos].zeroCnt = 0;
 		codeBuf[codePos].value = 0;
 		codePos++;
@@ -46,7 +37,29 @@ void RLE::getRLECodes(const Block* block, RLECode* codeBuf, int* count){
 	*count = codePos;
 }
 
-BitString BitEncoder::getBitString(int val){
+
+void RunLengthCodec::decode(const RLCode* codes, const int codeCnt, const int seqLength,int* seqBuf){
+	int i, pos = 0;
+	for (i = 0; i < codeCnt - 1; ++i) {
+		seqBuf[pos++] = codes[i].value;
+		for (int j = 0; j < codes[i].zeroCnt; ++j) {
+			seqBuf[pos++] = 0;
+		}
+	}
+	//EOB判断
+	if (codes[i].value == 0 && codes[i].zeroCnt == 0) {
+		while (pos != seqLength) {
+			seqBuf[pos++] = 0;
+		}
+	} else {
+		seqBuf[pos++] = codes[i].value;
+		for (int j = 0; j < codes[i].zeroCnt; ++j) {
+			seqBuf[pos++] = 0;
+		}
+	}
+}
+
+BitString BitCodec::getBitString(int val){
 	if (val < 0) {
 		val = -val;
 		BitString bitString(val);
@@ -56,20 +69,33 @@ BitString BitEncoder::getBitString(int val){
 	return BitString(val);
 }
 
-BYTE BitEncoder::mergeToByte(int high4, int low4){
+BYTE BitCodec::mergeToByte(int high4, int low4){
 	return ((0xF0 & (BYTE)(high4 << 4)) | (0x0F & (BYTE)low4));
 }
 
-DPCM::DPCM() :pred(0){
+int BitCodec::getValue(const BitString& bitString) {
+	//负数时,最高位为0
+	if (bitString.bit(bitString.length() - 1) == 0) {
+		return -(~bitString.value());
+	} else {
+		return bitString.value();
+	}
+}
+
+DPCM::DPCM() :_preVal(0){
 
 }
 
 void DPCM::reset(){
-	pred = 0;
+	_preVal = 0;
 }
 
 int DPCM::nextDiff(int val){
-	int res = val - pred;
-	pred = val;
+	int res = val - _preVal;
+	_preVal = val;
 	return res;
+}
+
+int DPCM::nextVal(int diff){
+	return diff + _preVal;
 }

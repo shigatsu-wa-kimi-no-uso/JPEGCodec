@@ -18,19 +18,13 @@
     <ClCompile Include="ColorSpaceConverter.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Downsampler.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="DCTBlockSplitter.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="DCT.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Quantizer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="BMPFile.cpp">
+    <ClCompile Include="BMPFileLoader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="CodingUtil.cpp">
@@ -51,6 +45,12 @@
     <ClCompile Include="JPEGFileBuilder.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Decoder.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="IntHuffman.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typedef.h">
@@ -59,19 +59,13 @@
     <ClInclude Include="ColorSpaceConverter.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Downsampler.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="DCTBlockSplitter.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="DCT.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Quantizer.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="BMPFile.h">
+    <ClInclude Include="BMPFileLoader.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="CodingUtil.h">
@@ -93,6 +87,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="JPEGFileBuilder.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Decoder.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="BitReader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="BMPFileBuilder.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

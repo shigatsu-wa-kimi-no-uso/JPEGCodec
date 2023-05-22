@@ -1,14 +1,11 @@
 #pragma once
 #ifndef typedef_h__
 #define typedef_h__
-#define _CRT_SECURE_NO_WARNINGS
 #include <vector>
 
 #define MACROS
 #define ALIAS
 #define STRUCTS
-#define DEBUG
-
 
 #ifdef MACROS
 #define BLOCK_COLCNT 8
@@ -23,13 +20,37 @@ using WORD = unsigned short;
 using DWORD = unsigned long;
 using LONG = long;
 using BYTE = unsigned char;
-using Block = float[BLOCK_ROWCNT][BLOCK_COLCNT];
+using Block = int[BLOCK_ROWCNT][BLOCK_COLCNT];
 using HuffmanTable = std::vector<std::vector<DWORD>>;
 #endif
 
 #ifdef STRUCTS
 
 #pragma pack(push,1)	//设置结构体为1字节对齐
+
+struct BitCode {
+	enum : BYTE {
+		EOB = 0
+	};
+	union {
+		struct {
+			BYTE bitLength : 4;
+			BYTE zeroCnt : 4;
+		};
+		BYTE codedUnit;
+	};
+	DWORD bits;
+};
+
+#ifdef ALIAS
+using BitCodeArray = std::vector<BitCode>;
+#endif
+
+struct BitCodeUnit {
+	std::vector<BitCodeArray> y;
+	BitCodeArray cb;
+	BitCodeArray cr;
+};
 
 union SubsampFact{
 	enum : BYTE {
@@ -67,7 +88,6 @@ struct BitmapInfoHeader
 	DWORD biClrUsed;
 	DWORD biClrImportant;
 };
-
 
 struct RGBTriple
 {
@@ -168,9 +188,8 @@ struct YCbCr
 	BYTE Cr;
 };
 
-
-//已转换为大端
-struct Marker 
+//非大端
+struct Marker
 {
 	enum Common	: WORD
 	{
@@ -319,6 +338,7 @@ enum class HTableType : BYTE
 	AC,
 	MAXENUMVAL
 };
+
 enum class Component : BYTE
 {
 	LUMA = 0x1,
@@ -340,14 +360,11 @@ struct JPEG_HTableHeader
 	Info info;					//内容
 };
 
-
 struct JPEG_HTable
 {
 	JPEG_HTableHeader header;
 	BYTE* entries[16];		//哈夫曼表 16项,每项为一个数组
 };
-
-
 
 struct JPEG_ScanHeader_BDCT_YCbCr
 {
@@ -403,13 +420,14 @@ struct MCU {
 	Block* cr;
 };
 
-struct RLECode {
+struct RLCode {
 	int zeroCnt;
 	int value;
 };
 
-#endif
 
+
+#endif
 #pragma pack(pop)
 
 #endif // typedef_h__

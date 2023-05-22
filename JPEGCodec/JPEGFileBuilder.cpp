@@ -19,7 +19,7 @@ void JPEGFileBuilder::_writeJFIFHeader() {
 	fwrite(&jfifHeader, sizeof(jfifHeader), 1, _hFile);
 }
 
-void JPEGFileBuilder::_writeQuantTable(const BYTE id, const BYTE* quantTable) {
+void JPEGFileBuilder::_writeQuantTable(const BYTE id, const BYTE (&quantTable)[BLOCK_ROWCNT][BLOCK_COLCNT]) {
 	WORD length = sizeof(JPEG_QTableHeader::Info) + BLOCK_COLCNT * BLOCK_ROWCNT;
 	JPEG_QTableHeader qtHeader1 = {
 		big_endian(Marker::DQT),
@@ -128,7 +128,7 @@ void JPEGFileBuilder::_writeCodedBytes() {
 
 JPEGFileBuilder::JPEGFileBuilder() {}
 
-JPEGFileBuilder& JPEGFileBuilder::setQuantTable(const BYTE id, const BYTE* quantTable) {
+JPEGFileBuilder& JPEGFileBuilder::setQuantTable(const BYTE id, const BYTE (*quantTable)[BLOCK_ROWCNT][BLOCK_COLCNT]) {
 	_quantTables.push_back({ id, quantTable });
 	return *this;
 }
@@ -170,8 +170,8 @@ void JPEGFileBuilder::makeJPGFile(const char* fileName) {
 	WORD SOImarker = big_endian(Marker::SOI);
 	fwrite(&SOImarker, sizeof(SOImarker), 1, _hFile);
 	_writeJFIFHeader();
-	for (const std::pair<const BYTE, const BYTE*>& entry : _quantTables) {
-		_writeQuantTable(entry.first, entry.second);
+	for (const std::pair<const BYTE, const BYTE(*)[BLOCK_ROWCNT][BLOCK_COLCNT]>& entry : _quantTables) {
+		_writeQuantTable(entry.first, *entry.second);
 	}
 	_writeFrameHeader();
 	for (const std::tuple<BYTE, HuffmanTable, HTableType>& entry : _huffTables) {

@@ -3,40 +3,67 @@
 #include "BMPFile.h"
 #include "Encoder.h"
 #include "UtilFunc.h"
+#include "DCT.h"
+
 
 BMPFile bmpFile;
 const char* src;
 const char* dst;
 BYTE subsampFact_H, subsampFact_V;
 SubsampFact subsampFact;
-bool mean_samp_on;
 float qualityFactor;
 
+const char* opt_fact_h = "-fact_h";
+const char* opt_fact_v = "-fact_v";
+const char* opt_src = "-src";
+const char* opt_dst = "-dst";
+const char* opt_quality = "-quality";
+const char* opt_help = "-h";
+
+void printHelp() {
+    char buf[256];
+    puts("Usage:");
+    sprintf(buf, "%s [arg]", opt_fact_h);
+    printf("%24s %s\n", buf, "Specifies horizontal subsampling factor by an integer [arg]. 1<= [arg] <= 2");
+    sprintf(buf, "%s [arg]", opt_fact_v);
+    printf("%24s %s\n", buf, "Specifies vertical subsampling factor by an integer [arg]. 1<= [arg] <= 2");
+    sprintf(buf, "%s [arg]", opt_src);
+    printf("%24s %s\n", buf, "Specifies a BMP file to convert to JPG format.");
+    sprintf(buf, "%s [arg]", opt_dst);
+    printf("%24s %s\n", buf, "Creates the JPG file with the specified file path.");
+    sprintf(buf, "%s [arg]", opt_quality);
+    printf("%24s %s\n", buf, "Specifies a quality factor. 0 < [arg] <= 100");
+    printf("%24s %s\n", opt_help, "Shows this info.");
+
+}
+
+
 bool initialize(int argc, char** argv) {
-    const char* fact_h = getoptarg(argc, argv, "-fact_h");
-    const char* fact_v = getoptarg(argc, argv, "-fact_v");
-    src = getoptarg(argc, argv, "-src");
-    dst = getoptarg(argc, argv, "-dst");
-    const char* szQualityFactor = getoptarg(argc, argv, "-quality");
+    if (testopt(argc, argv, opt_help)) {
+        return false;
+    }
+    const char* fact_h = getoptarg(argc, argv, opt_fact_h);
+    const char* fact_v = getoptarg(argc, argv, opt_fact_v);
+    src = getoptarg(argc, argv, opt_src);
+    dst = getoptarg(argc, argv, opt_dst);
+    const char* szQualityFactor = getoptarg(argc, argv, opt_quality);
     if (src == nullptr || dst == nullptr || fact_h == nullptr || fact_v == nullptr || szQualityFactor == nullptr) {
+        fprintf(stderr, "Illegal argument.\n");
         return false;
     }
 
     subsampFact.factor_h = atoi(fact_h);
     subsampFact.factor_v = atoi(fact_v);
     qualityFactor = atof(szQualityFactor);
-    mean_samp_on = testopt(argc, argv, "-mean_samp");
-
-    printf("fact_h: %d fact_v: %d\n", (int)subsampFact.factor_h, (int)subsampFact.factor_v);
-
-    if (mean_samp_on) {
-        printf("Option -mean_samp: true\n");
-    } else {
-        printf("Option -mean_samp: false\n");
+    if ((int)subsampFact.factor_h < 0 || (int)subsampFact.factor_v < 0) {
+        fprintf(stderr, "Illegal argument.\n");
+        return false;
     }
-
+#ifdef DEBUG
+    printf("fact_h: %d fact_v: %d\n", (int)subsampFact.factor_h, (int)subsampFact.factor_v);
+#endif
     if (!bmpFile.load(src)) {
-        perror("Malformed BMP hFile or unsupported BMP format.");
+        fprintf(stderr,"Malformed BMP hFile or unsupported BMP format.\n");
         return false;
     }
     return true;
@@ -62,15 +89,16 @@ void encode(BMPFile bmpFile, SubsampFact subsampFact, const char* outputFilePath
     Encoder encoder;
     encoder.makeMCUs(ycbcrMat, subsampFact);
     encoder.doFDCT();
-    encoder.doQuantize(qualityFactor);
+    encoder.quantize(qualityFactor);
     encoder.encode();
     encoder.makeJPGFile(outputFilePath);
 }
 
 int main(int argc, char** argv) {
-    if (!initialize(argc, argv)) {
-        perror("illegal command.");
+    if (initialize(argc, argv)) {
+        encode(bmpFile, subsampFact, dst);
+    } else {
+        printHelp();
     }
-    encode(bmpFile, subsampFact, dst);
     return 0;
 }
