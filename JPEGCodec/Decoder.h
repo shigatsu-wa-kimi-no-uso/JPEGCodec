@@ -1,5 +1,10 @@
+/*
+* Decoder.h
+* Written by kiminouso, 2023/05/26
+*/
 #pragma once
-
+#ifndef Decoder_h__
+#define Decoder_h__
 #include <vector>
 #include "typedef.h"
 #include "BitString.h"
@@ -52,14 +57,9 @@ private:
 	//符号表(二维数组)
 	//第一维:符号表适应类型(DC/AC)
 	//第二维:符号表编号(与JPEG中的哈夫曼表编号相同)
-	std::vector<SymbolTable> _symbolTable[(int)HTableType::MAXENUMVAL];
+	std::vector<SymbolTable> _symbolTables[(int)HTableType::MAXENUMVAL];
 	std::vector<BYTE[8][8]> _quantTables;	//注意:JPG文件中的量化表是以Z字形顺序排列后的量化表(原封不动添加到_quantTables数组,故是Z字形排列的)
-	int _quantTableSel_Y;
-	int _quantTableSel_Cb;
-	int _quantTableSel_Cr;
-	int _tableSel_Y;
-	int _tableSel_Cb;
-	int _tableSel_Cr;
+	ComponentConfig _cmptCfgs[(int)Component::MAXENUMVAL];
 	Matrix<MCU>* _MCUs{};
 	DPCM _dpcmEncoders[3];
 	WORD _width{};
@@ -106,6 +106,7 @@ private:
 			}
 		}
 	}
+
 	void _matchSymbol(const SymbolTable& table, BitReader& reader, Symbol& symbol) {
 		BitString bs;
 		do {
@@ -117,18 +118,19 @@ private:
 		} while (table.hasSymbol(bs));
 		symbol = table.symbol(bs);
 	}
-	void _huffmanDecodeOneBlock(const int tableID, BitCodeArray& bitCodes, BitReader& reader) {
+
+	void _huffmanDecodeOneBlock(const int tableID_DC, const int tableID_AC, BitCodeArray& bitCodes, BitReader& reader) {
 		int count = 0;
 		bool readEOB = false;
 		Symbol symbol;
 		BitCode bitCode;
-		_matchSymbol(_symbolTable[(int)HTableType::DC][tableID], reader, symbol);
+		_matchSymbol(_symbolTables[(int)HTableType::DC][tableID_DC], reader, symbol);
 		bitCode.codedUnit = symbol.symbol;
 		bitCode.bits = reader.readBits(bitCode.bitLength).value();
 		bitCodes.push_back(bitCode);
 		++count;
 		while (count < 64 && !readEOB) {
-			_matchSymbol(_symbolTable[(int)HTableType::AC][tableID], reader, symbol);
+			_matchSymbol(_symbolTables[(int)HTableType::AC][tableID_AC], reader, symbol);
 			bitCode.codedUnit = symbol.symbol;
 			bitCode.bits = reader.readBits(bitCode.bitLength).value();
 			bitCodes.push_back(bitCode);
@@ -147,13 +149,25 @@ private:
 		BitCodeArray bitCodes;
 		for (i = 0; i < _subsampFact.factor_v; ++i) {
 			for (j = 0; j < _subsampFact.factor_h; ++j) {
-				_huffmanDecodeOneBlock(_tableSel_Y, bitCodes, reader);
+				_huffmanDecodeOneBlock(
+					_cmptCfgs[(int)Component::LUMA].DC_HTableSel,
+					_cmptCfgs[(int)Component::LUMA].AC_HTableSel,
+					bitCodes,
+					reader);
 				bitCodeUnit.y.push_back(bitCodes);
 			}
 		}
-		_huffmanDecodeOneBlock(_tableSel_Cb, bitCodes, reader);
+		_huffmanDecodeOneBlock(
+			_cmptCfgs[(int)Component::CHROMA_B].DC_HTableSel,
+			_cmptCfgs[(int)Component::CHROMA_B].AC_HTableSel,
+			bitCodes, 
+			reader);
 		bitCodeUnit.cb = bitCodes;
-		_huffmanDecodeOneBlock(_tableSel_Cr, bitCodes, reader);
+		_huffmanDecodeOneBlock(
+			_cmptCfgs[(int)Component::CHROMA_R].DC_HTableSel,
+			_cmptCfgs[(int)Component::CHROMA_R].AC_HTableSel,
+			bitCodes,
+			reader);
 		bitCodeUnit.cr = bitCodes;
 	}
 
@@ -205,96 +219,6 @@ private:
 		}
 	}
 
-public:
-	void setCodedData(const std::vector<BYTE>& codedData) {
-		_codedData = codedData;
-	}
-	void setSubsamplingFactor(SubsampFact& subsampFact) {
-		_subsampFact = subsampFact;
-	}
-	void setSize(WORD width,WORD height) {
-		_width = width;
-		_height = height;
-		int mcus_col = (ALIGN(_width, _subsampFact.factor_h + 2)) / (_subsampFact.factor_h * BLOCK_COLCNT);
-		int mcus_row = (ALIGN(_height, _subsampFact.factor_v + 2)) / (_subsampFact.factor_v * BLOCK_ROWCNT);
-		_MCUs = new Matrix<MCU>(mcus_row, mcus_col);
-	}
-	void setSymbolTable(const HuffmanTable& huffTable,const int id,const HTableType type) {
-		//一般情况下,id是连续的
-		while (_symbolTable[(int)type].size() <= id) {
-			_symbolTable[(int)type].push_back(SymbolTable());
-		}
-		_symbolTable[(int)type][id] = SymbolTable(0xFFFF);
-		std::vector<std::vector<BitString>> bitStringTable;
-		IntHuffman::getCanonicalCodes(huffTable, bitStringTable);
-		size_t len = huffTable.size();
-		for (size_t i = 1; i < len; ++i) {
-			size_t cnt = huffTable[i].size();
-			for (size_t j = 0; j < cnt;++j) {
-				_symbolTable[(int)type][id].symbol(bitStringTable[i][j]) = { (BYTE)huffTable[i][j] ,bitStringTable[i][j].length()};
-			}
-		}
-	}
-
-	//过程:
-	//
-	// 原始数据-->哈夫曼解码-->RLE解码-->还原每个Block(Z字形排列的)
-	// +--HuffmanDecode--++------BitDecode--------+
-	//
-	void decode() {
-		Matrix<BitCodeUnit> bitCodeMatrix(_MCUs->row_cnt, _MCUs->column_cnt);
-		_huffmanDecode(bitCodeMatrix);
-		_bitDecode(bitCodeMatrix);
-	}
-
-	//对Z字形排列的序列dequantize, 由于量化表也是Z字形排列的,因此在dequantize之后再将其正过来
-	void dequantize() {
-		for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
-			for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
-				MCU& mcu = (*_MCUs)[r][c];
-				for (DWORD i = 0; i < _subsampFact.factor_v; ++i) {
-					for (DWORD j = 0; j < _subsampFact.factor_h; ++j) {
-						Block& input = *mcu.y[i * _subsampFact.factor_h + j];
-						Block& output = input;
-						Quantizer::dequantize(input, _quantTables[_quantTableSel_Y], output);
-					}
-				}
-				Quantizer::dequantize(*mcu.cb, _quantTables[_quantTableSel_Cb], *mcu.cb);
-				Quantizer::dequantize(*mcu.cr, _quantTables[_quantTableSel_Cr], *mcu.cr);
-			}
-		}
-	}
-
-	void doIDCT() {
-		for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
-			for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
-				//在MCU矩阵中选择一个MCU, 并分配新的MCU
-				MCU& mcu = (*_MCUs)[r][c];
-				MCU newMCU;
-				Block zigzagged;
-				_allocMCU(newMCU);
-				//对Y块进行IFDCT
-				for (DWORD i = 0; i < _subsampFact.factor_v; ++i) {
-					for (DWORD j = 0; j < _subsampFact.factor_h; ++j) {
-						getZigzaggedSequence(*mcu.y[i * _subsampFact.factor_h + j], (int(&)[64])zigzagged);
-						_rshift128(zigzagged);
-						Block& output = *newMCU.y[i * _subsampFact.factor_h + j];
-						DCT::inverseDCT(zigzagged, output);
-					}
-				}
-				//对Cb,Cr块进行FDCT
-				getZigzaggedSequence(*mcu.cb, (int(&)[64])zigzagged);
-				_rshift128(zigzagged);
-				DCT::inverseDCT(zigzagged, *newMCU.cb);
-				getZigzaggedSequence(*mcu.cr, (int(&)[64])zigzagged);
-				_rshift128(zigzagged);
-				DCT::inverseDCT(zigzagged, *newMCU.cr);
-				//更新到MCU矩阵
-				_updateMCU(mcu, newMCU);
-			}
-		}
-	}
-
 	void _makeYCbCrDataOfOneMCU(const MCU& mcu, int pos_x, int pos_y, Matrix<YCbCr>& ycbcrData) {
 		int stride_r = _subsampFact.factor_v;
 		int stride_c = _subsampFact.factor_h;
@@ -331,11 +255,11 @@ public:
 		int imgbound_row = _height;
 
 		//写入Y
-		for (int r = 0; r + pos_y  < imgbound_row; ++r) {
+		for (int r = 0; r + pos_y < imgbound_row; ++r) {
 			int y_unitSel_r = r % BLOCK_ROWCNT;
 			int imgpos_y = pos_y + r;
-			for (int c = 0; c + pos_x  < imgbound_col; ++c) {
-				int imgpos_x = pos_x + c; 
+			for (int c = 0; c + pos_x < imgbound_col; ++c) {
+				int imgpos_x = pos_x + c;
 				int y_blockSel = stride_c * (r / BLOCK_ROWCNT) + c / BLOCK_ROWCNT;
 				int y_unitSel_c = c % BLOCK_COLCNT;
 				ycbcrData[imgpos_y][imgpos_x].Y = mcu.y[y_blockSel][0][y_unitSel_r][y_unitSel_c];
@@ -351,6 +275,103 @@ public:
 			}
 		}
 	}
+
+public:
+	void setCodedData(std::vector<BYTE>&& codedData) {
+		_codedData = std::vector<BYTE>(std::move(codedData));
+	}
+
+	void setComponentConfigs(const ComponentConfig(&cmptCfgs)[(int)Component::MAXENUMVAL]) {
+		_cmptCfgs[(int)Component::LUMA] = cmptCfgs[(int)Component::LUMA];
+		_cmptCfgs[(int)Component::CHROMA_B] = cmptCfgs[(int)Component::CHROMA_B];
+		_cmptCfgs[(int)Component::CHROMA_R] = cmptCfgs[(int)Component::CHROMA_R];
+		_subsampFact = cmptCfgs[(int)Component::LUMA].subsampFact;
+	}
+
+	void setSize(WORD width,WORD height) {
+		_width = width;
+		_height = height;
+		int mcus_col = (ALIGN(_width, _subsampFact.factor_h + 2)) / (_subsampFact.factor_h * BLOCK_COLCNT);
+		int mcus_row = (ALIGN(_height, _subsampFact.factor_v + 2)) / (_subsampFact.factor_v * BLOCK_ROWCNT);
+		_MCUs = new Matrix<MCU>(mcus_row, mcus_col);
+	}
+
+	void setSymbolTable(const int id,const HuffmanTable& huffTable,const HTableType type) {
+		//一般情况下,id是连续的
+		while (_symbolTables[(int)type].size() <= id) {
+			_symbolTables[(int)type].push_back(SymbolTable());
+		}
+		_symbolTables[(int)type][id] = SymbolTable(0xFFFF);
+		std::vector<std::vector<BitString>> bitStringTable;
+		IntHuffman::getCanonicalCodes(huffTable, bitStringTable);
+		size_t len = huffTable.size();
+		for (size_t i = 1; i < len; ++i) {
+			size_t cnt = huffTable[i].size();
+			for (size_t j = 0; j < cnt;++j) {
+				_symbolTables[(int)type][id].symbol(bitStringTable[i][j]) = { (BYTE)huffTable[i][j] ,bitStringTable[i][j].length()};
+			}
+		}
+	}
+
+	//过程:
+	//
+	// 原始数据-->哈夫曼解码-->RLE解码-->还原每个Block(Z字形排列的)
+	// +--HuffmanDecode--++------BitDecode--------+
+	//
+	void decode() {
+		Matrix<BitCodeUnit> bitCodeMatrix(_MCUs->row_cnt, _MCUs->column_cnt);
+		_huffmanDecode(bitCodeMatrix);
+		_bitDecode(bitCodeMatrix);
+	}
+
+	//对Z字形排列的序列dequantize, 由于量化表也是Z字形排列的,因此在dequantize之后再将其正过来
+	void dequantize() {
+		for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
+			for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
+				MCU& mcu = (*_MCUs)[r][c];
+				for (DWORD i = 0; i < _subsampFact.factor_v; ++i) {
+					for (DWORD j = 0; j < _subsampFact.factor_h; ++j) {
+						Block& input = *mcu.y[i * _subsampFact.factor_h + j];
+						Block& output = input;
+						Quantizer::dequantize(input, _quantTables[_cmptCfgs[(int)Component::LUMA].QTableSel], output);
+					}
+				}
+				Quantizer::dequantize(*mcu.cb, _quantTables[_cmptCfgs[(int)Component::CHROMA_B].QTableSel], *mcu.cb);
+				Quantizer::dequantize(*mcu.cr, _quantTables[_cmptCfgs[(int)Component::CHROMA_R].QTableSel], *mcu.cr);
+			}
+		}
+	}
+
+	void doIDCT() {
+		for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
+			for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
+				//在MCU矩阵中选择一个MCU, 并分配新的MCU
+				MCU& mcu = (*_MCUs)[r][c];
+				MCU newMCU;
+				Block zigzagged;
+				_allocMCU(newMCU);
+				//对Y块进行IFDCT
+				for (DWORD i = 0; i < _subsampFact.factor_v; ++i) {
+					for (DWORD j = 0; j < _subsampFact.factor_h; ++j) {
+						getZigzaggedSequence(*mcu.y[i * _subsampFact.factor_h + j], (int(&)[64])zigzagged);
+						_rshift128(zigzagged);
+						Block& output = *newMCU.y[i * _subsampFact.factor_h + j];
+						DCT::inverseDCT(zigzagged, output);
+					}
+				}
+				//对Cb,Cr块进行FDCT
+				getZigzaggedSequence(*mcu.cb, (int(&)[64])zigzagged);
+				_rshift128(zigzagged);
+				DCT::inverseDCT(zigzagged, *newMCU.cb);
+				getZigzaggedSequence(*mcu.cr, (int(&)[64])zigzagged);
+				_rshift128(zigzagged);
+				DCT::inverseDCT(zigzagged, *newMCU.cr);
+				//更新到MCU矩阵
+				_updateMCU(mcu, newMCU);
+			}
+		}
+	}
+
 
 	void makeYCbCrData(Matrix<YCbCr>& ycbcrData) {
 		int r, c;
@@ -369,3 +390,5 @@ public:
 
 };
 
+
+#endif // Decoder_h__

@@ -159,6 +159,7 @@
     <ClInclude Include="Heap.h" />
     <ClInclude Include="IntHuffman.h" />
     <ClInclude Include="JPEGFileBuilder.h" />
+    <ClInclude Include="JPEGFileLoader.h" />
     <ClInclude Include="Quantizer.h" />
     <ClInclude Include="typedef.h" />
     <ClInclude Include="UtilFunc.h" />

@@ -98,5 +98,8 @@
     <ClInclude Include="BMPFileBuilder.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="JPEGFileLoader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

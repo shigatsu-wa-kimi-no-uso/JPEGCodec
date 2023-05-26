@@ -4,18 +4,15 @@
 */
 #include "BitWriter.h"
 
-BitWriter::BitWriter(std::vector<BYTE>& data) :_lastByteBitCnt(8), _data(data)
-{
+BitWriter::BitWriter(std::vector<BYTE>& data) :_lastByteBitCnt(8), _data(data){
 
 }
 
-BitWriter::BitWriter(const BitWriter& src) :_lastByteBitCnt(src._lastByteBitCnt), _data(src._data)
-{
+BitWriter::BitWriter(const BitWriter& src) :_lastByteBitCnt(src._lastByteBitCnt), _data(src._data){
 
 }
 
-void BitWriter::writeBit(const bool bit)
-{
+void BitWriter::writeBit(const bool bit){
 	if (_lastByteBitCnt == 8) {
 		_data.push_back(0);
 		_lastByteBitCnt = 0;
@@ -25,28 +22,24 @@ void BitWriter::writeBit(const bool bit)
 	_stuffZeroIfNecessary();
 }
 
-void BitWriter::_stuffZeroIfNecessary()
-{
+void BitWriter::_stuffZeroIfNecessary(){
 	if (_data.back() == 0xFF) {
 		_data.push_back(0);
 	}
 }
 
-std::vector<BYTE>& BitWriter::getData()
-{
+std::vector<BYTE>& BitWriter::getData(){
 	return _data;
 }
 
-void BitWriter::write(const BitString& src)
-{
+void BitWriter::write(const BitString& src){
 	int len = src.length();
 	for (int i = len - 1; i >= 0; --i) {
 		writeBit(src.bit(i));
 	}
 }
 
-void BitWriter::fillIncompleteByteWithOne()
-{
+void BitWriter::fillIncompleteByteWithOne(){
 	while (_lastByteBitCnt != 8) {
 		writeBit(1);
 	}

@@ -1,4 +1,11 @@
+/*
+* BitString.h
+* Written by kiminouso, 2023/05/01
+*/
+
 #pragma once
+#ifndef BitString_h__
+#define BitString_h__
 #include<assert.h>
 #include<ostream>
 #include"typedef.h"
@@ -232,3 +239,5 @@ public:
 	}
 
 };
+
+#endif // BitString_h__

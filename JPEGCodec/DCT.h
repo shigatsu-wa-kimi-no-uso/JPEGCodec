@@ -1,3 +1,7 @@
+/*
+* DCT.h
+* Written by kiminouso, 2023/04/05
+*/
 #pragma once
 #ifndef DCT_h__
 #define DCT_h__
@@ -44,12 +48,7 @@ private:
 		}()
 	};
 
-
-
-	Matrix<float>* _dctblocks;
-	DWORD _blockCnt;
 	static float _get_coeff(int u, int v, int x, int y);
-	float _shift128(float val);
 
 	//1维DCT的表达式直接展开算法,利用重复计算的单元提取出来不重复计算
 	static void _1D_8P_DCT(const int(&seq)[BLOCK_COLCNT], int(&output)[BLOCK_COLCNT]);
@@ -57,9 +56,9 @@ private:
 	static void _transpose(const Block& input, Block& output);
 
 public:
-	void setBlocks(Matrix<float>* dctblocks, DWORD blockCnt);
-	void transform(Matrix<float>* outputBlocks);
 	static void forwardDCT(const Block& input, Block& output);
+	[[deprecated]]
+	static void forwardDCT_BF(const Block& input, Block& output);
 	static void inverseDCT(const Block& input, Block& output);
 };
 

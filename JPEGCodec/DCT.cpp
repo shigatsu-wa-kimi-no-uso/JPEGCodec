@@ -4,13 +4,9 @@ float DCT::_get_coeff(int u, int v, int x, int y) {
 	return _coeff[u][v][x][y];
 }
 
-inline float DCT::_shift128(float val) {
-	return val - 128;
-}
-
 //1维DCT的表达式直接展开算法,利用重复计算的单元提取出来不重复计算,降低时间复杂度
 inline void DCT::_1D_8P_DCT(const int(&seq)[BLOCK_COLCNT], int(&output)[BLOCK_COLCNT]) {
-	constexpr double PI = 3.141592653;
+	constexpr double PI = 3.141592653589793;
 	const static double c[8] = {
 		1.0 / sqrt(2),
 		cos(PI * 1 / 16.0),
@@ -106,37 +102,11 @@ inline void DCT::_transpose(const Block& input, Block& output) {
 	}
 }
 
-void DCT::setBlocks(Matrix<float>* dctblocks, DWORD blockCnt) {
-	_dctblocks = dctblocks;
-	_blockCnt = blockCnt;
-}
-
-void DCT::transform(Matrix<float>* outputBlocks) {
-	for (DWORD i = 0; i < _blockCnt; ++i) {
-		for (int u = 0; u < 8; ++u) {
-			for (int v = 0; v < 8; ++v) {
-				//printf("F(%d,%d)=", u, v);
-				double t = 0;
-				for (int x = 0; x < 8; ++x) {
-					for (int y = 0; y < 8; ++y) {
-						//t += mat[x][y] * cosine(x, u) * cosine(y, v) * c(u) * c(v);
-						t += _shift128(_dctblocks[i][x][y]) * _get_coeff(u, v, x, y);
-						//printf("%.3f*%.3f + ", _dctblocks[i][x][y], _get_coeff(u, v, x, y));
-
-					}/*printf("\n");*/
-				}
-				outputBlocks[i][u][v] = t;
-				//printf(" = %.3f\n\n", t);
-			}
-		}
-	}
-
-}
-
 void DCT::forwardDCT(const Block& input, Block& output){
 	
 	Block tmpBlock;
 	Block tmpBlock2;
+	//2维DCT拆解为2次1维DCT
 	for (int i = 0; i < BLOCK_ROWCNT; ++i) {
 		_1D_8P_DCT(input[i], tmpBlock[i]);
 	}
@@ -145,8 +115,11 @@ void DCT::forwardDCT(const Block& input, Block& output){
 		_1D_8P_DCT(tmpBlock2[i], tmpBlock[i]);
 	}
 	_transpose(tmpBlock, output);
+}
 
-	/*
+[[deprecated]]
+void DCT::forwardDCT_BF(const Block& input, Block& output) {
+	//暴力算法
 	for (int u = 0; u < BLOCK_ROWCNT; ++u) {
 		for (int v = 0; v < BLOCK_COLCNT; ++v) {
 			double t = 0;
@@ -157,6 +130,5 @@ void DCT::forwardDCT(const Block& input, Block& output){
 			}
 			output[u][v] = t;
 		}
-	}*/
+	}
 }
-

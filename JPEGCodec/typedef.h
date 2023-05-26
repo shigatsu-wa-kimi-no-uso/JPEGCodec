@@ -1,4 +1,9 @@
 #pragma once
+/*
+* typedef.h
+* Written by kiminouso, 2023/05/01
+*/
+
 #ifndef typedef_h__
 #define typedef_h__
 #include <vector>
@@ -6,6 +11,7 @@
 #define MACROS
 #define ALIAS
 #define STRUCTS
+#define STRUCT_PREDECLS
 
 #ifdef MACROS
 #define BLOCK_COLCNT 8
@@ -28,6 +34,77 @@ using HuffmanTable = std::vector<std::vector<DWORD>>;
 
 #pragma pack(push,1)	//设置结构体为1字节对齐
 
+#ifdef STRUCT_PREDECLS
+enum class HTableType;
+enum class Component;
+union SubsampFact;
+struct ComponentConfig;
+struct BitCode;
+struct BitCodeUnit;
+struct BitmapFileHeader;
+struct BitmapInfoHeader;
+struct RGBTriple;
+struct RGBQuad;
+template<typename T> struct Sequence;
+template<typename T> struct Matrix;
+struct YCbCr;
+struct Marker;
+struct JPEG_JFIFHeader;
+struct JPEG_QTableHeader;
+struct JPEG_QTable_8BitPrec;
+struct JPEG_QTable_16BitPrec;
+struct JPEG_FrameHeader_YCbCr;
+struct JPEG_HTableHeader;
+struct JPEG_HTable;
+struct ImgComponent;
+struct JPEG_ScanHeader_BDCT_YCbCr;
+struct JPEG_Scan_4H;
+struct JPEG_Frame_BDCT_2Q4H;
+struct JPEG_File_BDCT_2Q4H;
+struct MCU;
+struct RLCode;
+#endif
+
+#ifdef ALIAS
+using BitCodeArray = std::vector<BitCode>;
+#endif
+
+enum class HTableType : BYTE
+{
+	DC,
+	AC,
+	MAXENUMVAL
+};
+
+enum class Component : BYTE
+{
+	LUMA = 0x1,
+	CHROMA_B,
+	CHROMA_R,
+	MAXENUMVAL
+};
+
+union SubsampFact {
+	BYTE rawVal;
+	enum : BYTE {
+		YUV_444 = 0x11,
+		YUV_440 = 0x12,
+		YUV_422 = 0x21,
+		YUV_420 = 0x22
+	}factor;
+	struct {
+		BYTE factor_v : 4;	//低4位 垂直采样因子
+		BYTE factor_h : 4;	//高4位 水平采样因子
+	};
+};
+
+struct ComponentConfig {
+	int QTableSel;
+	int DC_HTableSel;
+	int AC_HTableSel;
+	SubsampFact subsampFact;
+};
+
 struct BitCode {
 	enum : BYTE {
 		EOB = 0
@@ -42,27 +119,10 @@ struct BitCode {
 	DWORD bits;
 };
 
-#ifdef ALIAS
-using BitCodeArray = std::vector<BitCode>;
-#endif
-
 struct BitCodeUnit {
 	std::vector<BitCodeArray> y;
 	BitCodeArray cb;
 	BitCodeArray cr;
-};
-
-union SubsampFact{
-	enum : BYTE {
-		YUV_444 = 0x11,
-		YUV_440 = 0x12,
-		YUV_422 = 0x21,
-		YUV_420 = 0x22
-	}factor;
-	struct {
-		BYTE factor_v : 4;	//低4位 垂直采样因子
-		BYTE factor_h : 4;	//高4位 水平采样因子
-	};
 };
 
 struct BitmapFileHeader
@@ -188,26 +248,27 @@ struct YCbCr
 	BYTE Cr;
 };
 
-//非大端
+//不含0xFF前缀
 struct Marker
 {
-	enum Common	: WORD
+	enum Common	: BYTE
 	{
-		SOI = 0xFFD8,	//文件开始标识符
-		EOI = 0xFFD9,	//文件结束标识符
-		SOS = 0xFFDA,	//数据段扫描起始符
-		DQT = 0xFFDB,	//量化表定义符
-		DNL = 0xFFDC,	//number of lines definer
-		DRI = 0xFFDD,	//restart interval definer
-		DHP = 0xFFDE,	//hierarchical progression definer
-		EXP = 0xFFDF,	//expand reference components
-		COM = 0xFFFE,	//注释
-		DAT_NIL=0xFF00	//数据段单字节为0
+		SOI = 0xD8,	//文件开始标识符
+		EOI = 0xD9,	//文件结束标识符
+		SOS = 0xDA,	//数据段扫描起始符
+		DQT = 0xDB,	//量化表定义符
+		DNL = 0xDC,	//number of lines definer
+		DRI = 0xDD,	//restart interval definer
+		DHP = 0xDE,	//hierarchical progression definer
+		EXP = 0xDF,	//expand reference components
+		COM = 0xFE,	//注释
+		ESC = 0xFF, //转义符(所有marker前的0xFF前缀)
+		DAT_NIL=0x00	//数据段单字节为0
 	};
 
-	enum APP : WORD
+	enum APP : BYTE
 	{
-		APP0=0xFFE0,
+		APP0 = 0xE0,
 		APP1,
 		APP2,
 		APP3,
@@ -225,22 +286,23 @@ struct Marker
 		APP15
 	};
 
-	enum SOFMarker : WORD //帧起始符号, 包含差分/非差分式, 均采用哈夫曼编码方式
+	enum SOFMarker : BYTE //帧起始符号, 包含差分/非差分式, 均采用哈夫曼编码方式
 	{
-		BASELINE_DCT = 0xFFC0,
-		EXTENDED_SEQ_DCT = 0xFFC1,
-		PROG_DCT = 0xFFC2,
-		LOSSLESS = 0xFFC3,
-		DIFF_SEQ_DCT = 0xFFC5,
-		DIFF_PROG_DCT = 0xFFC6,
-		DIFF_LOSSLESS = 0xFFC7,
+		BASELINE_DCT = 0xC0,
+		EXTENDED_SEQ_DCT = 0xC1,
+		PROG_DCT = 0xC2,
+		LOSSLESS = 0xC3,
+		DIFF_SEQ_DCT = 0xC5,
+		DIFF_PROG_DCT = 0xC6,
+		DIFF_LOSSLESS = 0xC7,
 	};
 
-	enum HTSpec : WORD	//哈夫曼表定义符号
+	enum HTSpec : BYTE	//哈夫曼表定义符号
 	{
-		DHT = 0xFFC4
+		DHT = 0xC4
 	};
 };
+
 
 //JFIF头
 struct JPEG_JFIFHeader
@@ -262,7 +324,8 @@ struct JPEG_JFIFHeader
 		BYTE YThumbnail;	//虽略图的垂直像素
 		//sizeof(JPEG_JFIFHeader::Info) == 16
 	};
-	WORD JFIFmarker;		//起始标记
+	BYTE esc;
+	BYTE JFIFmarker;				//起始标记
 	Info info;						//内容
 };
 
@@ -278,7 +341,8 @@ struct JPEG_QTableHeader
 			PREC_16BIT
 		}precision : 4;	//高4位 精度 0为8bit, 1为16bit
 	};
-	WORD DQTmarker;	//定义符Marker::DQT
+	BYTE esc;
+	BYTE DQTmarker;	//定义符Marker::DQT
 	Info info;				//内容
 };
 
@@ -291,7 +355,6 @@ struct JPEG_QTable_16BitPrec {
 	JPEG_QTableHeader header;
 	WORD qtable_16bit[8][8];
 };
-
 
 struct JPEG_FrameHeader_YCbCr
 {
@@ -312,14 +375,9 @@ struct JPEG_FrameHeader_YCbCr
 		}numberOfComponents;	//分量数(YCbCr为3, 只有灰度为1, CMYK为4)
 		struct ImgComponent 
 		{
-			enum : BYTE 
-			{
-				LUMA = 0x1,
-				CHROMA_B,
-				CHROMA_R
-			}identifier; //分量ID, YCbCr 3分量情况下, 1对应Y, 2对应Cb, 3对应Cr
+			Component identifier; //分量ID, YCbCr 3分量情况下, 1对应Y, 2对应Cb, 3对应Cr
 			union {
-				BYTE _subsampFact;
+				BYTE subsampFact;
 				struct {
 					BYTE VSubsampFact : 4;	//低4位 垂直采样因子
 					BYTE HSubsampFact : 4;	//高4位 水平采样因子
@@ -328,23 +386,9 @@ struct JPEG_FrameHeader_YCbCr
 			BYTE qtableID;			//量化表ID
 		} components[COMPCNT_YUV];			//YCbCr恒有3分量
 	};
-	WORD DCTmarker;	//DCT类型标记 Marker::BASELINE_DCT
+	BYTE esc;
+	BYTE DCTmarker;	//DCT类型标记 Marker::BASELINE_DCT
 	Info info;				//内容
-};
-
-enum class HTableType : BYTE
-{
-	DC,
-	AC,
-	MAXENUMVAL
-};
-
-enum class Component : BYTE
-{
-	LUMA = 0x1,
-	CHROMA_B,
-	CHROMA_R,
-	MAXENUMVAL
 };
 
 struct JPEG_HTableHeader
@@ -356,7 +400,8 @@ struct JPEG_HTableHeader
 		HTableType type : 4;	//哈夫曼表适用对象, 高4位, 有DC和AC可选
 		BYTE tableEntryLen[16];	//哈夫曼表各项长度,共16项
 	};
-	WORD DHTmarker;		//定义符 Marker::DHT
+	BYTE esc;
+	BYTE DHTmarker;		//定义符 Marker::DHT
 	Info info;					//内容
 };
 
@@ -364,6 +409,18 @@ struct JPEG_HTable
 {
 	JPEG_HTableHeader header;
 	BYTE* entries[16];		//哈夫曼表 16项,每项为一个数组
+};
+
+struct ImgComponent
+{
+	Component identifier; //分量ID, YCbCr 3分量情况下, 1对应Y, 2对应Cb, 3对应Cr; 与FrameHeader中的对应
+	union {
+		struct {
+			BYTE AC_HTableID : 4;
+			BYTE DC_HTableID : 4;
+		};
+		BYTE tableSelector;
+	};
 };
 
 struct JPEG_ScanHeader_BDCT_YCbCr
@@ -376,18 +433,14 @@ struct JPEG_ScanHeader_BDCT_YCbCr
 			COMPCNT_YUV = 3,
 			COMPCNT_CMYK = 4
 		}numberOfComponents = COMPCNT_YUV;	//分量数(YCbCr 为 3)
-		struct ImgComponent
-		{
-			Component identifier; //分量ID, YCbCr 3分量情况下, 1对应Y, 2对应Cb, 3对应Cr; 与FrameHeader中的对应
-			BYTE AC_HTableID : 4;
-			BYTE DC_HTableID : 4;
-		}components[COMPCNT_YUV];
+		ImgComponent components[COMPCNT_YUV];
 		BYTE startOfSpectralSel = 0;	//谱选择开始,固定为0
 		BYTE endOfSpectralSel = 63;	//谱选择结束,固定为63
 		BYTE successiveApproxBitPosL : 4 = 0;		//default initialization. C++20 only
 		BYTE successiveApproxBitPosH : 4 = 0;		//default initialization. C++20 only
 	};
-	WORD SOSmarker;		//定义符Marker::SOS
+	BYTE esc;
+	BYTE SOSmarker;		//定义符Marker::SOS
 	Info info;
 };
 
@@ -409,9 +462,11 @@ struct JPEG_Frame_BDCT_2Q4H
 //Baseline DCT 2量化表 4哈夫曼表 JPEG 文件结构
 struct JPEG_File_BDCT_2Q4H
 {
-	WORD SOImarker; // Marker::SOI;
+	BYTE esc0;
+	BYTE SOImarker; // Marker::SOI;
 	JPEG_Frame_BDCT_2Q4H frame;
-	WORD EOFmarker; // Marker::EOI;
+	BYTE esc1;
+	BYTE EOFmarker; // Marker::EOI;
 };
 
 struct MCU {

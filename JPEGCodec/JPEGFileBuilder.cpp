@@ -4,7 +4,8 @@
 void JPEGFileBuilder::_writeJFIFHeader() {
 	//JFIF Header
 	JPEG_JFIFHeader jfifHeader = {
-		big_endian(Marker::APP0),
+		Marker::ESC,
+		Marker::APP0,
 		{
 			big_endian((WORD)sizeof(JPEG_JFIFHeader::Info)),
 			"JFIF",
@@ -22,7 +23,8 @@ void JPEGFileBuilder::_writeJFIFHeader() {
 void JPEGFileBuilder::_writeQuantTable(const BYTE id, const BYTE (&quantTable)[BLOCK_ROWCNT][BLOCK_COLCNT]) {
 	WORD length = sizeof(JPEG_QTableHeader::Info) + BLOCK_COLCNT * BLOCK_ROWCNT;
 	JPEG_QTableHeader qtHeader1 = {
-		big_endian(Marker::DQT),
+		Marker::ESC,
+		Marker::DQT,
 		{
 			big_endian(length),
 			id,
@@ -37,7 +39,8 @@ void JPEGFileBuilder::_writeQuantTable(const BYTE id, const BYTE (&quantTable)[B
 
 void JPEGFileBuilder::_writeFrameHeader() {
 	JPEG_FrameHeader_YCbCr header = {
-		big_endian(Marker::BASELINE_DCT),
+		Marker::ESC,
+		Marker::BASELINE_DCT,
 		{
 			big_endian((WORD)sizeof(JPEG_FrameHeader_YCbCr::Info)),
 			JPEG_FrameHeader_YCbCr::Info::PREC_8BIT,
@@ -77,7 +80,8 @@ void JPEGFileBuilder::_writeHuffmanTable(const BYTE id, const HuffmanTable& tabl
 		}
 	}
 	JPEG_HTableHeader header = {
-		big_endian(Marker::DHT),
+		Marker::ESC,
+		Marker::DHT,
 		{
 			big_endian((WORD)(sizeof(JPEG_HTableHeader::Info) + tableData.size())),
 			id,
@@ -92,7 +96,8 @@ void JPEGFileBuilder::_writeHuffmanTable(const BYTE id, const HuffmanTable& tabl
 
 void JPEGFileBuilder::_writeScanHeader() {
 	JPEG_ScanHeader_BDCT_YCbCr header = {
-		big_endian(Marker::SOS),
+		Marker::ESC,
+		Marker::SOS,
 		{
 			big_endian((WORD)sizeof(JPEG_ScanHeader_BDCT_YCbCr::Info)),
 			JPEG_ScanHeader_BDCT_YCbCr::Info::COMPCNT_YUV,
@@ -167,7 +172,9 @@ JPEGFileBuilder& JPEGFileBuilder::setSubsampFact(const SubsampFact& subsampFact)
 void JPEGFileBuilder::makeJPGFile(const char* fileName) {
 	_hFile = fopen(fileName, "wb");
 	//SOI
-	WORD SOImarker = big_endian(Marker::SOI);
+	BYTE esc = Marker::ESC;
+	fwrite(&esc, sizeof(esc), 1, _hFile);
+	BYTE SOImarker = Marker::SOI;
 	fwrite(&SOImarker, sizeof(SOImarker), 1, _hFile);
 	_writeJFIFHeader();
 	for (const std::pair<const BYTE, const BYTE(*)[BLOCK_ROWCNT][BLOCK_COLCNT]>& entry : _quantTables) {
@@ -180,7 +187,8 @@ void JPEGFileBuilder::makeJPGFile(const char* fileName) {
 	_writeScanHeader();
 	_writeCodedBytes();
 	//EOI
-	WORD EOFMarker = big_endian(Marker::EOI);
+	fwrite(&esc, sizeof(esc), 1, _hFile);
+	BYTE EOFMarker = Marker::EOI;
 	fwrite(&EOFMarker, sizeof(EOFMarker), 1, _hFile);
 	fclose(_hFile);
 }
