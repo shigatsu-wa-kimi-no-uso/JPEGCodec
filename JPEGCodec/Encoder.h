@@ -1,11 +1,10 @@
-#pragma once
 /*
 * Encoder.h
 * Written by kiminouso, 2023/05/01
 */
+#pragma once
 #ifndef Encoder_h__
 #define Encoder_h__
-#include <vector>
 #include "typedef.h"
 #include "BitString.h"
 #include "CodingUtil.h"

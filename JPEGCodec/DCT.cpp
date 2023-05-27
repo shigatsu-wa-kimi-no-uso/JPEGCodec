@@ -5,7 +5,7 @@ float DCT::_get_coeff(int u, int v, int x, int y) {
 }
 
 //1维DCT的表达式直接展开算法,利用重复计算的单元提取出来不重复计算,降低时间复杂度
-inline void DCT::_1D_8P_DCT(const int(&seq)[BLOCK_COLCNT], int(&output)[BLOCK_COLCNT]) {
+inline void DCT::_1D_8P_FDCT(const int(&seq)[BLOCK_COLCNT], int(&output)[BLOCK_COLCNT]) {
 	constexpr double PI = 3.141592653589793;
 	const static double c[8] = {
 		1.0 / sqrt(2),
@@ -94,7 +94,60 @@ inline void DCT::_1D_8P_DCT(const int(&seq)[BLOCK_COLCNT], int(&output)[BLOCK_CO
 	output[7] = myround(0.5*(c7x0n7 - c5x1n6 + c3x2n5 - c1x3n4));
 }
 
-inline void DCT::_transpose(const Block& input, Block& output) {
+void DCT::_1D_8P_IDCT(const int(&seq)[BLOCK_COLCNT], int(&output)[BLOCK_COLCNT]){
+	constexpr double PI = 3.141592653589793;
+	const static double c[8] = {
+		1.0 / sqrt(2),
+		cos(PI * 1 / 16.0),
+		cos(PI * 2 / 16.0),
+		cos(PI * 3 / 16.0),
+		cos(PI * 4 / 16.0),
+		cos(PI * 5 / 16.0),
+		cos(PI * 6 / 16.0),
+		cos(PI * 7 / 16.0)
+	};
+
+	const double c0f0 = c[0] * seq[0];
+
+	const double c1f1 = c[1] * seq[1];
+	const double c3f1 = c[3] * seq[1];
+	const double c5f1 = c[5] * seq[1];
+	const double c7f1 = c[7] * seq[1];
+
+	const double c2f2 = c[2] * seq[2];
+	const double c6f2 = c[2] * seq[2];
+
+	const double c1f3 = c[1] * seq[3];
+	const double c3f3 = c[3] * seq[3];
+	const double c5f3 = c[5] * seq[3];
+	const double c7f3 = c[7] * seq[3];
+
+	const double c4f4 = c[4] * seq[4];
+
+	const double c1f5 = c[1] * seq[5];
+	const double c3f5 = c[3] * seq[5];
+	const double c5f5 = c[5] * seq[5];
+	const double c7f5 = c[7] * seq[5];
+
+	const double c2f6 = c[2] * seq[6];
+	const double c6f6 = c[6] * seq[6];
+
+	const double c1f7 = c[1] * seq[7];
+	const double c3f7 = c[3] * seq[7];
+	const double c5f7 = c[5] * seq[7];
+	const double c7f7 = c[7] * seq[7];
+
+	output[0] = c0f0 + c1f1 + c2f2 + c3f3 + c4f4 + c5f5 + c6f6 + c7f7;
+	output[1] = c0f0 + c3f1 + c6f2 - c7f3 - c4f4 - c1f5 - c2f6 - c5f7;
+	output[2] = c0f0 + c5f1 - c6f2 - c1f3 - c4f4 + c7f5 + c2f6 + c3f7;
+	output[3] = c0f0 + c7f1 - c2f2 - c5f3 + c4f4 + c3f5 - c6f6 - c1f7;
+	output[4] = c0f0 - c7f1 - c2f2 + c5f3 + c4f4 - c3f5 - c6f6 + c1f7;
+	output[5] = c0f0 - c5f1 - c6f2 + c1f3 - c4f4 - c7f5 + c2f6 - c3f7;
+	output[6] = c0f0 - c3f1 + c6f2 + c7f3 - c4f4 + c1f5 - c2f6 + c5f7;
+	output[7] = c0f0 - c1f1 + c2f2 - c3f3 + c4f4 - c5f5 + c6f6 - c7f7;
+}
+
+void DCT::_transpose(const Block& input, Block& output) {
 	for (int i = 0; i < BLOCK_ROWCNT; ++i) {
 		for (int j = 0; j < BLOCK_COLCNT; ++j) {
 			output[j][i] = input[i][j];
@@ -103,16 +156,15 @@ inline void DCT::_transpose(const Block& input, Block& output) {
 }
 
 void DCT::forwardDCT(const Block& input, Block& output){
-	
 	Block tmpBlock;
 	Block tmpBlock2;
 	//2维DCT拆解为2次1维DCT
 	for (int i = 0; i < BLOCK_ROWCNT; ++i) {
-		_1D_8P_DCT(input[i], tmpBlock[i]);
+		_1D_8P_FDCT(input[i], tmpBlock[i]);
 	}
 	_transpose(tmpBlock, tmpBlock2);
 	for (int i = 0; i < BLOCK_ROWCNT; ++i) {
-		_1D_8P_DCT(tmpBlock2[i], tmpBlock[i]);
+		_1D_8P_FDCT(tmpBlock2[i], tmpBlock[i]);
 	}
 	_transpose(tmpBlock, output);
 }
@@ -131,4 +183,18 @@ void DCT::forwardDCT_BF(const Block& input, Block& output) {
 			output[u][v] = t;
 		}
 	}
+}
+
+void DCT::inverseDCT(const Block& input, Block& output){
+	Block tmpBlock;
+	Block tmpBlock2;
+	//2维DCT拆解为2次1维DCT
+	for (int i = 0; i < BLOCK_ROWCNT; ++i) {
+		_1D_8P_IDCT(input[i], tmpBlock[i]);
+	}
+	_transpose(tmpBlock, tmpBlock2);
+	for (int i = 0; i < BLOCK_ROWCNT; ++i) {
+		_1D_8P_IDCT(tmpBlock2[i], tmpBlock[i]);
+	}
+	_transpose(tmpBlock, output);
 }

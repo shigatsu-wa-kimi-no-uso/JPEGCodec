@@ -5,7 +5,6 @@
 #pragma once
 #ifndef DCT_h__
 #define DCT_h__
-#define _CRT_SECURE_NO_WARNINGS
 #include <array>
 #include "typedef.h"
 #include "UtilFunc.h"
@@ -14,6 +13,7 @@ class DCT
 {
 private:
 	using dct_coeff_t = std::array<std::array<std::array<std::array<float, 8>, 8>, 8>, 8>;
+
 	static constexpr dct_coeff_t _coeff{
 		[]()consteval {
 			std::array<std::array<double, 8>, 8> cosv{};
@@ -49,9 +49,10 @@ private:
 	};
 
 	static float _get_coeff(int u, int v, int x, int y);
-
 	//1维DCT的表达式直接展开算法,利用重复计算的单元提取出来不重复计算
-	static void _1D_8P_DCT(const int(&seq)[BLOCK_COLCNT], int(&output)[BLOCK_COLCNT]);
+	static void _1D_8P_FDCT(const int(&seq)[BLOCK_COLCNT], int(&output)[BLOCK_COLCNT]);
+
+	static void _1D_8P_IDCT(const int(&seq)[BLOCK_COLCNT], int(&output)[BLOCK_COLCNT]);
 
 	static void _transpose(const Block& input, Block& output);
 
@@ -59,6 +60,7 @@ public:
 	static void forwardDCT(const Block& input, Block& output);
 	[[deprecated]]
 	static void forwardDCT_BF(const Block& input, Block& output);
+
 	static void inverseDCT(const Block& input, Block& output);
 };
 

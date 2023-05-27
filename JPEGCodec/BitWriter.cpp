@@ -5,11 +5,9 @@
 #include "BitWriter.h"
 
 BitWriter::BitWriter(std::vector<BYTE>& data) :_lastByteBitCnt(8), _data(data){
-
 }
 
 BitWriter::BitWriter(const BitWriter& src) :_lastByteBitCnt(src._lastByteBitCnt), _data(src._data){
-
 }
 
 void BitWriter::writeBit(const bool bit){

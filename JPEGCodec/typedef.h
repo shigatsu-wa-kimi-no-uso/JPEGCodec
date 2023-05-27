@@ -1,9 +1,8 @@
-#pragma once
 /*
 * typedef.h
 * Written by kiminouso, 2023/05/01
 */
-
+#pragma once
 #ifndef typedef_h__
 #define typedef_h__
 #include <vector>
@@ -11,7 +10,6 @@
 #define MACROS
 #define ALIAS
 #define STRUCTS
-#define STRUCT_PREDECLS
 
 #ifdef MACROS
 #define BLOCK_COLCNT 8
@@ -33,41 +31,6 @@ using HuffmanTable = std::vector<std::vector<DWORD>>;
 #ifdef STRUCTS
 
 #pragma pack(push,1)	//设置结构体为1字节对齐
-
-#ifdef STRUCT_PREDECLS
-enum class HTableType;
-enum class Component;
-union SubsampFact;
-struct ComponentConfig;
-struct BitCode;
-struct BitCodeUnit;
-struct BitmapFileHeader;
-struct BitmapInfoHeader;
-struct RGBTriple;
-struct RGBQuad;
-template<typename T> struct Sequence;
-template<typename T> struct Matrix;
-struct YCbCr;
-struct Marker;
-struct JPEG_JFIFHeader;
-struct JPEG_QTableHeader;
-struct JPEG_QTable_8BitPrec;
-struct JPEG_QTable_16BitPrec;
-struct JPEG_FrameHeader_YCbCr;
-struct JPEG_HTableHeader;
-struct JPEG_HTable;
-struct ImgComponent;
-struct JPEG_ScanHeader_BDCT_YCbCr;
-struct JPEG_Scan_4H;
-struct JPEG_Frame_BDCT_2Q4H;
-struct JPEG_File_BDCT_2Q4H;
-struct MCU;
-struct RLCode;
-#endif
-
-#ifdef ALIAS
-using BitCodeArray = std::vector<BitCode>;
-#endif
 
 enum class HTableType : BYTE
 {
@@ -118,6 +81,10 @@ struct BitCode {
 	};
 	DWORD bits;
 };
+
+#ifdef ALIAS
+using BitCodeArray = std::vector<BitCode>;
+#endif
 
 struct BitCodeUnit {
 	std::vector<BitCodeArray> y;

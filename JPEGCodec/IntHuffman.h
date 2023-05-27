@@ -5,13 +5,11 @@
 #pragma once
 #ifndef Huffman_h__
 #define Huffman_h__
-#define _CRT_SECURE_NO_WARNINGS
 #include <queue>
 #include <vector>
 #include "typedef.h"
 #include "Heap.h"
 #include "BitString.h"
-
 
 class IntHuffman
 {
@@ -20,9 +18,7 @@ public:
 		DWORD val;
 		BitString bits;
 	};
-	
 private:
-
 	struct TreeNode
 	{
 		size_t freq;

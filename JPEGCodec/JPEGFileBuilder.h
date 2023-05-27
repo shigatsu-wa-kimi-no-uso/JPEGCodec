@@ -2,18 +2,16 @@
 * JPEGFileBuilder.h
 * Written by kiminouso, 2023/05/20
 */
-
 #pragma once
 #ifndef JPEGFileBuilder_h__
 #define JPEGFileBuilder_h__
-#define _CRT_SECURE_NO_WARNINGS
 #include <vector>
 #include "typedef.h"
-
 
 class JPEGFileBuilder
 {
 private:
+
 	std::vector<std::pair<const BYTE, const BYTE(*)[BLOCK_ROWCNT][BLOCK_COLCNT]>> _quantTables;
 	std::vector<std::tuple<const BYTE, const HuffmanTable, const HTableType>> _huffTables;
 	BYTE _cmptAdoptedHTable[(int)Component::MAXENUMVAL][(int)HTableType::MAXENUMVAL]{};

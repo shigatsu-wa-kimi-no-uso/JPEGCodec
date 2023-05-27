@@ -1,9 +1,7 @@
-
 /*
 * BMPFileBuilder.h
 * Written by kiminouso, 2023/05/22
 */
-
 #pragma once
 #ifndef BMPFileBuilder_h__
 #define BMPFileBuilder_h__

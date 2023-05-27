@@ -5,25 +5,28 @@
 #pragma once
 #ifndef Decoder_h__
 #define Decoder_h__
-#include <vector>
 #include "typedef.h"
 #include "BitString.h"
-#include "CodingUtil.h"
 #include "BitReader.h"
+#include "CodingUtil.h"
 #include "IntHuffman.h"
 #include "Quantizer.h"
 #include "UtilFunc.h"
 #include "DCT.h"
 
+
+/*
 class Decoder
 {
 private:
+
 	struct Symbol {
 		BYTE symbol;
 		int length;
 	};
 
-	class SymbolTable {
+	class SymbolTable 
+	{
 	private:
 		//哈夫曼编码-符号映射表
 		//符号不存在时,length==0
@@ -54,11 +57,13 @@ private:
 			return _symbols[bitString.value()];
 		}
 	};
+	
+	
 	//符号表(二维数组)
 	//第一维:符号表适应类型(DC/AC)
 	//第二维:符号表编号(与JPEG中的哈夫曼表编号相同)
 	std::vector<SymbolTable> _symbolTables[(int)HTableType::MAXENUMVAL];
-	std::vector<BYTE[8][8]> _quantTables;	//注意:JPG文件中的量化表是以Z字形顺序排列后的量化表(原封不动添加到_quantTables数组,故是Z字形排列的)
+	std::vector<const BYTE(*)[BLOCK_ROWCNT][BLOCK_COLCNT]> _quantTables;	//注意:JPG文件中的量化表是以Z字形顺序排列后的量化表(原封不动添加到_quantTables数组,故是Z字形排列的)
 	ComponentConfig _cmptCfgs[(int)Component::MAXENUMVAL];
 	Matrix<MCU>* _MCUs{};
 	DPCM _dpcmEncoders[3];
@@ -281,6 +286,13 @@ public:
 		_codedData = std::vector<BYTE>(std::move(codedData));
 	}
 
+	void setQuantTable(const int id,const BYTE (*quantTable)[BLOCK_ROWCNT][BLOCK_COLCNT]) {
+		while (_quantTables.size() <= id) {
+			_quantTables.push_back(nullptr);
+		}
+		_quantTables[id] = quantTable;
+	}
+
 	void setComponentConfigs(const ComponentConfig(&cmptCfgs)[(int)Component::MAXENUMVAL]) {
 		_cmptCfgs[(int)Component::LUMA] = cmptCfgs[(int)Component::LUMA];
 		_cmptCfgs[(int)Component::CHROMA_B] = cmptCfgs[(int)Component::CHROMA_B];
@@ -333,11 +345,11 @@ public:
 					for (DWORD j = 0; j < _subsampFact.factor_h; ++j) {
 						Block& input = *mcu.y[i * _subsampFact.factor_h + j];
 						Block& output = input;
-						Quantizer::dequantize(input, _quantTables[_cmptCfgs[(int)Component::LUMA].QTableSel], output);
+						Quantizer::dequantize(input, *_quantTables[_cmptCfgs[(int)Component::LUMA].QTableSel], output);
 					}
 				}
-				Quantizer::dequantize(*mcu.cb, _quantTables[_cmptCfgs[(int)Component::CHROMA_B].QTableSel], *mcu.cb);
-				Quantizer::dequantize(*mcu.cr, _quantTables[_cmptCfgs[(int)Component::CHROMA_R].QTableSel], *mcu.cr);
+				Quantizer::dequantize(*mcu.cb, *_quantTables[_cmptCfgs[(int)Component::CHROMA_B].QTableSel], *mcu.cb);
+				Quantizer::dequantize(*mcu.cr, *_quantTables[_cmptCfgs[(int)Component::CHROMA_R].QTableSel], *mcu.cr);
 			}
 		}
 	}
@@ -372,9 +384,8 @@ public:
 		}
 	}
 
-
 	void makeYCbCrData(Matrix<YCbCr>& ycbcrData) {
-		int r, c;
+		DWORD r, c;
 		int mcu_colUnitCnt = BLOCK_COLCNT * _subsampFact.factor_h;
 		int mcu_rowUnitCnt = BLOCK_ROWCNT * _subsampFact.factor_v;
 		for (r = 0; r < _MCUs->row_cnt - 1; ++r) {
@@ -387,8 +398,8 @@ public:
 			_makeYCbCrDataOfBoundaryMCU((*_MCUs)[r][c], c * mcu_colUnitCnt, r * mcu_rowUnitCnt, ycbcrData);
 		}
 	}
-
+	
 };
-
+*/
 
 #endif // Decoder_h__

@@ -1,27 +1,25 @@
 #include<stdio.h>
 #include "ColorSpaceConverter.h"
-#include "BMPFileLoader.h"
-#include "JPEGFileLoader.h"
 #include "Encoder.h"
 #include "Decoder.h"
 #include "UtilFunc.h"
+#include "BMPFileLoader.h"
+#include "JPEGFileLoader.h"
 
+static const char* src;
+static const char* dst;
+static SubsampFact subsampFact;
+static float qualityFactor;
+static const char* opt_fact_h = "-fact_h";
+static const char* opt_fact_v = "-fact_v";
+static const char* opt_src = "-src";
+static const char* opt_dst = "-dst";
+static const char* opt_quality = "-quality";
+static const char* opt_help = "-h";
+static const char* opt_encode = "-encode";
+static const char* opt_decode = "-decode";
 
-
-const char* src;
-const char* dst;
-SubsampFact subsampFact;
-float qualityFactor;
-const char* opt_fact_h = "-fact_h";
-const char* opt_fact_v = "-fact_v";
-const char* opt_src = "-src";
-const char* opt_dst = "-dst";
-const char* opt_quality = "-quality";
-const char* opt_help = "-h";
-const char* opt_encode = "-encode";
-const char* opt_decode = "-decode";
-
-enum WORKING_MODE {
+static enum class WORKING_MODE {
     UNDEFINED,
     ENCODE,
     DECODE
@@ -45,16 +43,16 @@ void printHelp() {
 }
 
 bool initialize(int argc, char** argv) {
-    mode = UNDEFINED;
+    mode = WORKING_MODE::UNDEFINED;
     if (testopt(argc, argv, opt_help)) {
         printHelp();
         return true;
     }
 
     if (testopt(argc, argv, opt_encode)) {
-        mode = ENCODE;
+        mode = WORKING_MODE::ENCODE;
     } else if (testopt(argc, argv, opt_decode)) {
-        mode = DECODE;
+        mode = WORKING_MODE::DECODE;
     } else {
         return false;
     }
@@ -79,6 +77,7 @@ bool initialize(int argc, char** argv) {
 #endif
     return true;
 }
+
 
 void encode(const char* srcFilePath,SubsampFact subsampFact, float qualityFactor,const char* outputFilePath)
 {
@@ -108,13 +107,14 @@ void encode(const char* srcFilePath,SubsampFact subsampFact, float qualityFactor
     encoder.makeJPGFile(outputFilePath);
 }
 
+
 void decode(const char* srcFilePath, const char* outputFilePath) {
     JPEGFileLoader loader;
     if (!loader.load(srcFilePath)) {
         fputs("Malformed JPEG file or unsupported JPEG format.", stderr);
         return;
     }
-
+    /*
     Decoder decoder;
     decoder.setComponentConfigs(loader.getComponentConfigs());
     decoder.setSize(loader.getWidth(), loader.getHeight());
@@ -134,7 +134,7 @@ void decode(const char* srcFilePath, const char* outputFilePath) {
     decoder.decode();
     decoder.dequantize();
     decoder.doIDCT();
-    decoder.makeYCbCrData(ycbcrMat);
+    decoder.makeYCbCrData(ycbcrMat);*/
 }
 
 int main(int argc, char** argv) {
@@ -145,10 +145,10 @@ int main(int argc, char** argv) {
 
     switch (mode)
     {
-    case ENCODE:
+    case WORKING_MODE::ENCODE:
         encode(src, subsampFact, qualityFactor, dst);
         break;
-    case DECODE:
+    case WORKING_MODE::DECODE:
         decode(src, dst);
         break;
     }

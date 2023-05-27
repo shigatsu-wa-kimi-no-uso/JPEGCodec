@@ -1,11 +1,10 @@
-/&
-& ColorSpaceConverter.h
-& Written by kiminouso, 2023/04/05
-&/
+/*
+* ColorSpaceConverter.h
+* Written by kiminouso, 2023/04/05
+*/
 #pragma once
 #ifndef ColorSpaceConverter_h__
 #define ColorSpaceConverter_h__
-#define _CRT_SECURE_NO_WARNINGS
 #include "typedef.h"
 
 class ColorSpaceConverter
@@ -20,11 +19,9 @@ private:
 	float _normalize(const float val);
 public:
 	void RGB2YCbCr(const RGBTriple& rgbColor, YCbCr& ycbcrColor);
-	void RGB2YCbCr(const RGBTriple& rgbColors, const DWORD count, YCbCr& ycbcrColors);
 	void RGB2YCbCr(const Matrix<RGBTriple>& rgbMatrix, Matrix<YCbCr>& ycbcrMatrix);
 	void RGB2YCbCr(const Matrix<RGBQuad>& rgbMatrix, Matrix<YCbCr>& ycbcrMatrix);
 	void YCbCr2RGB(const YCbCr& ycbcrColor, RGBTriple& rgbColor);
-	void YCbCr2RGB(const YCbCr& ycbcrColors, const DWORD count, RGBTriple& rgbColors);
 	void YCbCr2RGB(const Matrix<YCbCr>& ycbcrMatrix, Matrix<RGBTriple>& rgbMatrix);
 };
 

@@ -49,17 +49,17 @@ void JPEGFileBuilder::_writeFrameHeader() {
 			JPEG_FrameHeader_YCbCr::Info::COMPCNT_YUV,
 			{
 				{
-					JPEG_FrameHeader_YCbCr::Info::ImgComponent::LUMA,
+					Component::LUMA,
 					_subsampFact.factor,
 					0
 				},
 				{
-						JPEG_FrameHeader_YCbCr::Info::ImgComponent::CHROMA_B,
+						Component::CHROMA_B,
 						0x11,
 						1
 				},
 				{
-						JPEG_FrameHeader_YCbCr::Info::ImgComponent::CHROMA_R,
+						Component::CHROMA_R,
 						0x11,
 						1
 				}

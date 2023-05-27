@@ -6,7 +6,6 @@
 #ifndef BMPFileLoader_h__
 #define BMPFileLoader_h__
 #include "typedef.h"
-#include <stdio.h>
 
 class BMPFileLoader
 {

@@ -3,16 +3,17 @@
 * JPEGFileLoader.h
 * Written by kiminouso, 2023/05/23
 */
-
 #pragma once
 #ifndef JPEGFileLoader_h__
 #define JPEGFileLoader_h__
 #include "typedef.h"
 #include "UtilFunc.h"
 
-class JPEGFileLoader {
+class JPEGFileLoader 
+{
 private:
-	class JPEGFileReader {
+	class JPEGFileReader 
+	{
 	private:
 		FILE* _hFile;
 	public:
@@ -51,7 +52,7 @@ private:
 
 	ComponentConfig _cmptCfgs[(int)Component::MAXENUMVAL];
 
-	std::vector<std::pair<int, BYTE[8][8]>> _quantTables;
+	std::vector<std::pair<int, BYTE(*)[8][8]>> _quantTables;
 	std::vector<std::pair<int, HuffmanTable>> _huffTables[(int)HTableType::MAXENUMVAL];
 	WORD _width;
 	WORD _height;
@@ -73,7 +74,7 @@ private:
 		if (host_order(info.length) != sizeof(info) + BLOCK_COLCNT*BLOCK_ROWCNT) {
 			fputs("Structure around 'DQT' is malformed.",stderr);
 		}
-		std::pair<int, BYTE[8][8]> entry;
+		std::pair<int, BYTE(*)[8][8]> entry;
 		entry.first = info.tableID;
 		reader.read(entry.second, sizeof(entry.second));
 		_quantTables.push_back(entry);
@@ -125,7 +126,6 @@ private:
 			_cmptCfgs[(int)info.components[i].identifier].DC_HTableSel = info.components[i].DC_HTableID;
 		}
 	}
-
 
 	void _readScanData(JPEGFileReader& reader) {
 		BYTE curr;
@@ -208,20 +208,26 @@ public:
 		}
 		if (!read_SOI) {
 			fprintf(stderr, notfounderrstr,"SOI");
+			return false;
 		}
 		if (!read_DQT) {
 			fprintf(stderr, notfounderrstr, "DQT");
+			return false;
 		}
 		if (!read_SOF) {
 			fprintf(stderr, notfounderrstr, "SOF");
+			return false;
 		}
 		if (!read_DHT) {
 			fprintf(stderr, notfounderrstr, "DHT");
+			return false;
 		}
 		if (!read_SOS) {
 			fprintf(stderr, notfounderrstr, "SOS");
+			return false;
 		}
 		_readScanData(reader);
+		return true;
 	}
 
 	const ComponentConfig (&getComponentConfigs() const )[(int)Component::MAXENUMVAL] {
@@ -240,7 +246,7 @@ public:
 		return _codedData;
 	}
 
-	const std::vector<std::pair<int, BYTE[8][8]>> getQuantTables() const {
+	const std::vector<std::pair<int, BYTE(*)[8][8]>> getQuantTables() const {
 		return _quantTables;
 	}
 
