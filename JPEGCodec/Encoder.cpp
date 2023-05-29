@@ -2,8 +2,6 @@
 * Encoder.cpp
 * Written by kiminouso, 2023/05/01
 */
-#include <iomanip>
-#include <iostream>
 #include "Encoder.h"
 #include "Quantizer.h"
 #include "DCT.h"
@@ -156,6 +154,7 @@ void Encoder::_bitEncodeOneBlock(const Block& input, BitCodeArray& output, DPCM&
 #endif
 	RunLengthCodec::encode(&zigzagged[1], BLOCK_COLCNT * BLOCK_ROWCNT - 1, &codeBuf[1], &count);
 	count++;
+	output.reserve(count);
 	for (int i = 0; i < count; ++i) {
 		BitString bitString = BitCodec::getBitString(codeBuf[i].value);
 		BitCode bitCode;
@@ -174,8 +173,7 @@ void Encoder::_bitEncodeOneBlock(const Block& input, BitCodeArray& output, DPCM&
 #endif
 }
 
-void Encoder::_accumulateFrequency(const BitCodeArray& input, SymbolTable& tbl_DC, SymbolTable& tbl_AC)
-{
+void Encoder::_accumulateFrequency(const BitCodeArray& input, SymbolTable& tbl_DC, SymbolTable& tbl_AC){
 	size_t len = input.size();
 	tbl_DC.frequency(input[0].codedUnit)++;
 	for (size_t i = 1; i < len; ++i) {
@@ -183,8 +181,8 @@ void Encoder::_accumulateFrequency(const BitCodeArray& input, SymbolTable& tbl_D
 	}
 }
 
-void Encoder::_countOneUnitFreq(const BitCodeUnit& bitCodeUnit, SymbolTable& tbl_Y_DC, SymbolTable& tbl_Y_AC, SymbolTable& tbl_CbCr_DC, SymbolTable& tbl_CbCr_AC)
-{
+void Encoder::_countOneUnitFreq(const BitCodeUnit& bitCodeUnit, SymbolTable& tbl_Y_DC, 
+	SymbolTable& tbl_Y_AC, SymbolTable& tbl_CbCr_DC, SymbolTable& tbl_CbCr_AC){
 	for (int i = 0; i < _subsampFact.factor_h * _subsampFact.factor_v; ++i) {
 		_accumulateFrequency(bitCodeUnit.y[i], tbl_Y_DC, tbl_Y_AC);
 	}
@@ -192,8 +190,8 @@ void Encoder::_countOneUnitFreq(const BitCodeUnit& bitCodeUnit, SymbolTable& tbl
 	_accumulateFrequency(bitCodeUnit.cr, tbl_CbCr_DC, tbl_CbCr_AC);
 }
 
-void Encoder::_countFrequency(const Matrix<BitCodeUnit>& bitCodeMatrix, SymbolTable& tbl_Y_DC, SymbolTable& tbl_Y_AC, SymbolTable& tbl_CbCr_DC, SymbolTable& tbl_CbCr_AC)
-{
+void Encoder::_countFrequency(const Matrix<BitCodeUnit>& bitCodeMatrix, SymbolTable& tbl_Y_DC,
+	SymbolTable& tbl_Y_AC, SymbolTable& tbl_CbCr_DC, SymbolTable& tbl_CbCr_AC){
 	for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
 		for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
 			_countOneUnitFreq(
@@ -206,8 +204,7 @@ void Encoder::_countFrequency(const Matrix<BitCodeUnit>& bitCodeMatrix, SymbolTa
 	}
 }
 
-void Encoder::_bitEncodeOneMCU(const MCU& mcu, BitCodeUnit& codeUnit)
-{
+void Encoder::_bitEncodeOneMCU(const MCU& mcu, BitCodeUnit& codeUnit){
 	int i, j;
 	codeUnit.y.resize(_subsampFact.factor_v * _subsampFact.factor_h);
 	for (i = 0; i < _subsampFact.factor_v; ++i) {
@@ -219,8 +216,7 @@ void Encoder::_bitEncodeOneMCU(const MCU& mcu, BitCodeUnit& codeUnit)
 	_bitEncodeOneBlock(*mcu.cr, codeUnit.cr, _dpcmEncoders[2]);
 }
 
-void Encoder::_bitEncode(Matrix<BitCodeUnit>& bitCodeMatrix)
-{
+void Encoder::_bitEncode(Matrix<BitCodeUnit>& bitCodeMatrix){
 	for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
 		for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
 			_bitEncodeOneMCU((*_MCUs)[r][c], bitCodeMatrix[r][c]);
@@ -228,8 +224,7 @@ void Encoder::_bitEncode(Matrix<BitCodeUnit>& bitCodeMatrix)
 	}
 }
 
-void Encoder::_generateHuffmanTable(SymbolTable& symbolTable, HuffmanTable& huffTable)
-{
+void Encoder::_generateHuffmanTable(SymbolTable& symbolTable, HuffmanTable& huffTable){
 	IntHuffman huffmanUtil;
 	std::vector<int> codeLengthTable;
 	std::vector<std::vector<BitString>> bitStringTable;
@@ -247,8 +242,7 @@ void Encoder::_generateHuffmanTable(SymbolTable& symbolTable, HuffmanTable& huff
 	}
 }
 
-void Encoder::_huffmanEncodeOneBlock(const BitCodeArray& bitCodes, const SymbolTable& tbl_DC, const SymbolTable& tbl_AC, BitWriter& writer)
-{
+void Encoder::_huffmanEncodeOneBlock(const BitCodeArray& bitCodes, const SymbolTable& tbl_DC, const SymbolTable& tbl_AC, BitWriter& writer){
 	size_t len = bitCodes.size();
 	writer.write(tbl_DC.code(bitCodes[0].codedUnit));
 	writer.write(BitString(bitCodes[0].bits, bitCodes[0].bitLength));
@@ -256,7 +250,7 @@ void Encoder::_huffmanEncodeOneBlock(const BitCodeArray& bitCodes, const SymbolT
 		writer.write(tbl_AC.code(bitCodes[i].codedUnit));
 		writer.write(BitString(bitCodes[i].bits, bitCodes[i].bitLength));
 	}
-#ifdef TRACE
+#ifdef TRACE_HCODE
 	printf("Huffman:\n");
 	std::cout << "(" << (int)bitCodes[0].codedUnit << "--" << tbl_DC.code(bitCodes[0].codedUnit) << ")";
 	for (int i = 1; i < len; ++i) {
@@ -266,8 +260,9 @@ void Encoder::_huffmanEncodeOneBlock(const BitCodeArray& bitCodes, const SymbolT
 #endif
 }
 
-void Encoder::_huffmanEncodeOneUnit(const BitCodeUnit& bitCodeUnit, const SymbolTable& tbl_Y_DC, const SymbolTable& tbl_Y_AC, const SymbolTable& tbl_CbCr_DC, const SymbolTable& tbl_CbCr_AC, BitWriter& writer)
-{
+void Encoder::_huffmanEncodeOneUnit(const BitCodeUnit& bitCodeUnit, const SymbolTable& tbl_Y_DC,
+	const SymbolTable& tbl_Y_AC,const SymbolTable& tbl_CbCr_DC, const SymbolTable& tbl_CbCr_AC, 
+	BitWriter& writer){
 	for (int i = 0; i < _subsampFact.factor_h * _subsampFact.factor_v; ++i) {
 		_huffmanEncodeOneBlock(bitCodeUnit.y[i], tbl_Y_DC, tbl_Y_AC, writer);
 	}
@@ -275,13 +270,11 @@ void Encoder::_huffmanEncodeOneUnit(const BitCodeUnit& bitCodeUnit, const Symbol
 	_huffmanEncodeOneBlock(bitCodeUnit.cr, tbl_CbCr_DC, tbl_CbCr_AC, writer);
 }
 
-void Encoder::_reserveLastSymbol(SymbolTable& table, const DWORD lastSymbol)
-{
+void Encoder::_reserveLastSymbol(SymbolTable& table, const DWORD lastSymbol){
 	table.frequency(lastSymbol) = 1;
 }
 
-void Encoder::_removeReservedSymbol(HuffmanTable& table)
-{
+void Encoder::_removeReservedSymbol(HuffmanTable& table){
 	size_t len = table.size();
 	size_t i = len - 1;
 	//不考虑i越界的情况,正常情况下不可能越界,否则说明HuffmanTable本身有问题
@@ -291,25 +284,24 @@ void Encoder::_removeReservedSymbol(HuffmanTable& table)
 	table[i].pop_back();
 }
 
-void Encoder::_printHuffmanTable(const SymbolTable& symbolTable,const HuffmanTable& table, const char* description)
-{
+void Encoder::_printHuffmanTable(const SymbolTable& symbolTable,const HuffmanTable& table, const char* description){
 	printf("%s\n", description);
 	printf("%8s%5s%18s\n", "symbol", "freq", "code");
 	for (int i = 0; i < 257; ++i) {
 		if (symbolTable.frequency(i) != 0) {
-			printf("%8d%5d", i, symbolTable.frequency(i));
+			printf("%8d%5lld", i, symbolTable.frequency(i));
 			std::cout << std::setw(18) << symbolTable.code(i) << "\n";
 		}
 	}
 	printf("%8s%18s%5s\n", "symbol", "code", "len");
-	for (int i = 1; i < table.size(); ++i) {
-		for (int j = 0; j < table[i].size(); ++j) {
+	for (size_t i = 1; i < table.size(); ++i) {
+		for (size_t j = 0; j < table[i].size(); ++j) {
 			std::cout << std::setw(8) << table[i][j] << std::setw(18) << symbolTable.code(table[i][j]) << std::setw(5) << i << "\n";
 		}
 	}
 	printf("%8s%8s\n", "len", "freq");
-	for (int i = 1; i < table.size(); ++i) {
-		int freq = 0;
+	for (size_t i = 1; i < table.size(); ++i) {
+		size_t freq = 0;
 		for (int j = 0; j < table[i].size(); ++j) {
 			freq += symbolTable.frequency(table[i][j]);
 		}
@@ -318,8 +310,7 @@ void Encoder::_printHuffmanTable(const SymbolTable& symbolTable,const HuffmanTab
 	putchar('\n');
 }
 
-void Encoder::_huffmanEncode(const Matrix<BitCodeUnit>& bitCodeMatrix, std::vector<BYTE>& output)
-{
+void Encoder::_huffmanEncode(const Matrix<BitCodeUnit>& bitCodeMatrix, std::vector<BYTE>& output){
 	SymbolTable table_Y_DC(257);
 	SymbolTable table_Y_AC(257);
 	SymbolTable table_CbCr_DC(257);
@@ -336,7 +327,7 @@ void Encoder::_huffmanEncode(const Matrix<BitCodeUnit>& bitCodeMatrix, std::vect
 	_generateHuffmanTable(table_Y_AC, _huffTable_Y_AC);
 	_generateHuffmanTable(table_CbCr_DC, _huffTable_CbCr_DC);
 	_generateHuffmanTable(table_CbCr_AC, _huffTable_CbCr_AC);
-#ifdef DEBUG
+#ifdef TRACE_HTABLE
 	_printHuffmanTable(table_Y_DC, _huffTable_Y_DC, "Y_DC");
 	_printHuffmanTable(table_Y_AC, _huffTable_Y_AC, "Y_AC");
 	_printHuffmanTable(table_CbCr_DC, _huffTable_CbCr_DC, "CbCr_DC");
@@ -361,36 +352,58 @@ void Encoder::_huffmanEncode(const Matrix<BitCodeUnit>& bitCodeMatrix, std::vect
 	writer.fillIncompleteByteWithOne();
 }
 
-void Encoder::makeMCUs(const Matrix<YCbCr>& ycbcrData,const SubsampFact subsampFact)
-{
-	_subsampFact = subsampFact;
-	_width = (WORD)ycbcrData.column_cnt;
-	_height = (WORD)ycbcrData.row_cnt;
-	int mcus_col = (ALIGN(ycbcrData.column_cnt, _subsampFact.factor_h + 2)) / (_subsampFact.factor_h * BLOCK_COLCNT);
-	int mcus_row = (ALIGN(ycbcrData.row_cnt, _subsampFact.factor_v + 2)) / (_subsampFact.factor_v * BLOCK_ROWCNT);
-	int mcu_colUnitCnt = BLOCK_COLCNT * subsampFact.factor_h;
-	int mcu_rowUnitCnt = BLOCK_ROWCNT * subsampFact.factor_v;
-	_MCUs = new Matrix<MCU>(mcus_row, mcus_col);
-	int r, c;
-	for (r = 0; r < mcus_row - 1; ++r) {
-		for (c = 0; c < mcus_col - 1; ++c) {
+void Encoder::_deallocMCUs() {
+	for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
+		for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
+			_deallocMCU((*_MCUs)[r][c]);
+		}
+	}
+}
+
+void Encoder::_initAllocMCUs() {
+	for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
+		for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
 			_allocMCU((*_MCUs)[r][c]);
+		}
+	}
+}
+
+Encoder::Encoder(const WORD width,const WORD height, const SubsampFact& subsampFact)
+	:_subsampFact(subsampFact),_width(width),_height(height) {
+	int mcus_col = (ALIGN(width, _subsampFact.factor_h + 2)) / (_subsampFact.factor_h * BLOCK_COLCNT);
+	int mcus_row = (ALIGN(height, _subsampFact.factor_v + 2)) / (_subsampFact.factor_v * BLOCK_ROWCNT);
+	_MCUs = new Matrix<MCU>(mcus_row, mcus_col);
+	_initAllocMCUs();
+}
+
+Encoder::~Encoder() {
+	_deallocMCUs();
+	delete _MCUs;
+}
+
+void Encoder::makeMCUs(const Matrix<YCbCr>& ycbcrData){
+	int mcu_colUnitCnt = BLOCK_COLCNT * _subsampFact.factor_h;
+	int mcu_rowUnitCnt = BLOCK_ROWCNT * _subsampFact.factor_v;
+	DWORD r, c;
+
+	for (r = 0; r < _MCUs->row_cnt - 1; ++r) {
+		for (c = 0; c < _MCUs->column_cnt - 1; ++c) {
 			_makeOneMCU(ycbcrData, (*_MCUs)[r][c], c * mcu_colUnitCnt, r * mcu_rowUnitCnt);
 		}
-		_allocMCU((*_MCUs)[r][c]);
 		_makeBoundaryMCU(ycbcrData, (*_MCUs)[r][c], c * mcu_colUnitCnt, r * mcu_rowUnitCnt);
 	}
-	for (c = 0; c < mcus_col; ++c) {
-		_allocMCU((*_MCUs)[r][c]);
+	for (c = 0; c < _MCUs->column_cnt; ++c) {
 		_makeBoundaryMCU(ycbcrData, (*_MCUs)[r][c], c * mcu_colUnitCnt, r * mcu_rowUnitCnt);
 	}
 }
 
-void Encoder::doFDCT()
-{
+void Encoder::doFDCT(){
 	for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
 		for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
 			//在MCU矩阵中选择一个MCU, 并分配新的MCU
+		#ifdef TRACE_MCU_INDEX
+			printf("MCU(%d,%d)\n", r, c);
+		#endif
 			MCU& mcu = (*_MCUs)[r][c];
 			MCU newMCU;
 			_allocMCU(newMCU);
@@ -399,25 +412,61 @@ void Encoder::doFDCT()
 				for (DWORD j = 0; j < _subsampFact.factor_h; ++j) {
 					Block& input = *mcu.y[i * _subsampFact.factor_h + j];
 					Block& output = *newMCU.y[i * _subsampFact.factor_h + j];
+				#ifdef TRACE_BEFORE_DCT
+					printf("Y[%d][%d]\n", i, j);
+					printBlock(input);
+				#endif
 					_lshift128(input);
 					DCT::forwardDCT(input, output);
+				#ifdef TRACE_AFTER_DCT
+					Block zy;
+					printf("DCT[Y[%d][%d]]\n", i, j);
+					printBlock(output);
+					getZigzaggedSequence(output, (int(&)[64])zy);
+					printf("Zig[DCT[Y[%d][%d]]]\n", i, j);
+					printBlock(z);
+				#endif
+
+
 				}
 			}
 			//对Cb,Cr块进行FDCT
+		#ifdef TRACE_BEFORE_DCT
+			printf("Cb\n");
+			printBlock(*mcu.cb);
+		#endif
 			_lshift128(*mcu.cb);
 			DCT::forwardDCT(*mcu.cb, *newMCU.cb);
+		#ifdef TRACE_AFTER_DCT
+			printf("DCT[Cb]\n");
+			printBlock(*newMCU.cb);
+			Block zcb;
+			getZigzaggedSequence(*newMCU.cb, (int(&)[64])zcb);
+			printf("Zig[DCT[Cb]]\n");
+			printBlock(zcb);
+		#endif
 
+		#ifdef TRACE_BEFORE_DCT
+			printf("Cr\n");
+			printBlock(*mcu.cr);
+		#endif
 			_lshift128(*mcu.cr);
 			DCT::forwardDCT(*mcu.cr, *newMCU.cr);
-
+		#ifdef TRACE_AFTER_DCT
+			printf("DCT[Cr]\n");
+			printBlock(*newMCU.cr);
+			Block zcr;
+			getZigzaggedSequence(*newMCU.cr, (int(&)[64])zcr);
+			printf("Zig[DCT[Cr]]\n");
+			printBlock(zcr);
+		#endif
 			//更新到MCU矩阵
 			_updateMCU(mcu, newMCU);
 		}
 	}
 }
 
-void Encoder::quantize(float qualityFactor)
-{
+void Encoder::quantize(double qualityFactor){
 	Quantizer::generateUserTable(qualityFactor);
 	for (DWORD r = 0; r < _MCUs->row_cnt; ++r) {
 		for (DWORD c = 0; c < _MCUs->column_cnt; ++c) {
@@ -435,15 +484,13 @@ void Encoder::quantize(float qualityFactor)
 	}
 }
 
-void Encoder::encode()
-{
+void Encoder::encode(){
 	Matrix<BitCodeUnit> bitCodeMatrix(_MCUs->row_cnt, _MCUs->column_cnt);
 	_bitEncode(bitCodeMatrix);
 	_huffmanEncode(bitCodeMatrix, _codedBytes);
 }
 
-void Encoder::makeJPGFile(const char* fileName)
-{
+void Encoder::makeJPGFile(const char* fileName){
 	JPEGFileBuilder file;
 	file.setHeight(_height)
 		.setWidth(_width)

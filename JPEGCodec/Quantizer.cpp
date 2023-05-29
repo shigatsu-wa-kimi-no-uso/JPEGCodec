@@ -1,3 +1,7 @@
+/*
+* Quantizer.h
+* Written by kiminouso, 2023/04/05
+*/
 #include "Quantizer.h"
 
 const BYTE Quantizer::_std_qtable_Y[8][8] = {
@@ -26,21 +30,21 @@ BYTE Quantizer::_user_qtable_Y[8][8];
 
 BYTE Quantizer::_user_qtable_C[8][8];
 
-float Quantizer::_scalingFactor(BYTE stdQuant, float qualityFactor){
+double Quantizer::_scalingFactor(BYTE stdQuant, double qualityFactor){
 	if (qualityFactor >= 0 && qualityFactor < 50) {
-		return 5000.0f / qualityFactor;
+		return 5000.0 / qualityFactor;
 	} else if (qualityFactor < 100) {
-		return 200.0f - 2.0f * qualityFactor;
+		return 200.0 - 2.0 * qualityFactor;
 	} else {
 		return 1;
 	}
 }
 
-BYTE Quantizer::_userQuant(BYTE stdQuant, float qualityFactor){
-	return max((BYTE)(min(255.0f, (_scalingFactor(stdQuant, qualityFactor) * stdQuant + 50.0f) / 100.0f)), 1);
+BYTE Quantizer::_userQuant(BYTE stdQuant, double qualityFactor){
+	return max((BYTE)(min(255.0, (_scalingFactor(stdQuant, qualityFactor) * stdQuant + 50.0) / 100.0)), 1);
 }
 
-void Quantizer::_generateUserTable(const BYTE(&stdTable)[8][8], BYTE(&userTable)[8][8], float qualityFactor){
+void Quantizer::_generateUserTable(const BYTE(&stdTable)[8][8], BYTE(&userTable)[8][8], double qualityFactor){
 	for (int r = 0; r < BLOCK_ROWCNT; ++r) {
 		for (int c = 0; c < BLOCK_COLCNT; ++c) {
 			userTable[r][c] = _userQuant(stdTable[r][c], qualityFactor);
@@ -48,7 +52,7 @@ void Quantizer::_generateUserTable(const BYTE(&stdTable)[8][8], BYTE(&userTable)
 	}
 }
 
-void Quantizer::generateUserTable(float qualityFactor){
+void Quantizer::generateUserTable(double qualityFactor){
 	_generateUserTable(_std_qtable_Y, _user_qtable_Y, qualityFactor);
 	_generateUserTable(_std_qtable_C, _user_qtable_C, qualityFactor);
 }
@@ -65,13 +69,15 @@ const BYTE (*Quantizer::getQuantTable(QTable tableType))[BLOCK_ROWCNT][BLOCK_COL
 }
 
 void Quantizer::quantize(const Block& input,const QTable tableType, Block& output){
-	static BYTE(*qtable)[8];
+	const static BYTE(*qtable)[8];
 	switch (tableType)
 	{
 	case STD_QTABLE_LUMA:
+		//qtable = _std_qtable_Y;
 		qtable = _user_qtable_Y;
 		break;
 	case STD_QTABLE_CHROMA:
+		//qtable = _std_qtable_C;
 		qtable = _user_qtable_C;
 	}
 
@@ -85,7 +91,7 @@ void Quantizer::quantize(const Block& input,const QTable tableType, Block& outpu
 void Quantizer::dequantize(const Block& input, const BYTE(&quantTable)[BLOCK_ROWCNT][BLOCK_COLCNT], Block& output) {
 	for (int r = 0; r < BLOCK_ROWCNT; ++r) {
 		for (int c = 0; c < BLOCK_COLCNT; ++c) {
-			output[r][c] = myround(input[r][c] * 1.0 * quantTable[r][c]);
+			output[r][c] = input[r][c] * quantTable[r][c];
 		}
 	}
 }

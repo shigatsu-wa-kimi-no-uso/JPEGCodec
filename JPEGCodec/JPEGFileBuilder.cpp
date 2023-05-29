@@ -1,3 +1,7 @@
+/*
+* JPEGFileBuilder.h
+* Written by kiminouso, 2023/05/20
+*/
 #include "JPEGFileBuilder.h"
 #include "UtilFunc.h"
 
@@ -75,8 +79,8 @@ void JPEGFileBuilder::_writeHuffmanTable(const BYTE id, const HuffmanTable& tabl
 	size_t len = min(table.size(), 17);
 	for (size_t i = 1; i < len; ++i) {
 		tableEntryLen[i - 1] = (BYTE)table[i].size();
-		for (const BYTE symbol : table[i]) {
-			tableData.push_back(symbol);
+		for (const DWORD symbol : table[i]) {
+			tableData.push_back((BYTE)symbol);
 		}
 	}
 	JPEG_HTableHeader header = {

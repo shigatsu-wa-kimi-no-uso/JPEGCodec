@@ -74,16 +74,6 @@ inline void DCT::_1D_8P_FDCT(const int(&seq)[BLOCK_COLCNT], int(&output)[BLOCK_C
 	const double c7x2n5 = c[7] * x2n5;
 	const double c7x3n4 = c[7] * x3n4;
 
-	/*
-	output[0] = 0.5 * (c0x0p7 + c0x1p6 + c0x2p5 + c0x3p4);
-	output[1] = 0.5 * (c1x0n7 + c3x1n6 + c5x2n5 + c7x3n4);
-	output[2] = 0.5 * (c2x0p7 + c6x1p6 - c6x2p5 - c2x3p4);
-	output[3] = 0.5 * (c3x0n7 - c7x1n6 - c1x2n5 - c5x3n4);
-	output[4] = 0.5 * (c0x0p7 - c0x1p6 - c0x2p5 + c0x3p4);
-	output[5] = 0.5 * (c5x0n7 - c1x1n6 + c7x2n5 + c3x3n4);
-	output[6] = 0.5 * (c6x0p7 - c2x1p6 + c2x2p5 - c6x3p4);
-	output[7] = 0.5 * (c7x0n7 - c5x1n6 + c3x2n5 - c1x3n4);
-	*/
 	output[0] = myround(0.5*(c0x0p7 + c0x1p6 + c0x2p5 + c0x3p4));
 	output[1] = myround(0.5*(c1x0n7 + c3x1n6 + c5x2n5 + c7x3n4));
 	output[2] = myround(0.5*(c2x0p7 + c6x1p6 - c6x2p5 - c2x3p4));
@@ -137,14 +127,14 @@ void DCT::_1D_8P_IDCT(const int(&seq)[BLOCK_COLCNT], int(&output)[BLOCK_COLCNT])
 	const double c5f7 = c[5] * seq[7];
 	const double c7f7 = c[7] * seq[7];
 
-	output[0] = c0f0 + c1f1 + c2f2 + c3f3 + c4f4 + c5f5 + c6f6 + c7f7;
-	output[1] = c0f0 + c3f1 + c6f2 - c7f3 - c4f4 - c1f5 - c2f6 - c5f7;
-	output[2] = c0f0 + c5f1 - c6f2 - c1f3 - c4f4 + c7f5 + c2f6 + c3f7;
-	output[3] = c0f0 + c7f1 - c2f2 - c5f3 + c4f4 + c3f5 - c6f6 - c1f7;
-	output[4] = c0f0 - c7f1 - c2f2 + c5f3 + c4f4 - c3f5 - c6f6 + c1f7;
-	output[5] = c0f0 - c5f1 - c6f2 + c1f3 - c4f4 - c7f5 + c2f6 - c3f7;
-	output[6] = c0f0 - c3f1 + c6f2 + c7f3 - c4f4 + c1f5 - c2f6 + c5f7;
-	output[7] = c0f0 - c1f1 + c2f2 - c3f3 + c4f4 - c5f5 + c6f6 - c7f7;
+	output[0] = myround(0.5 * (c0f0 + c1f1 + c2f2 + c3f3 + c4f4 + c5f5 + c6f6 + c7f7));
+	output[1] = myround(0.5 * (c0f0 + c3f1 + c6f2 - c7f3 - c4f4 - c1f5 - c2f6 - c5f7));
+	output[2] = myround(0.5 * (c0f0 + c5f1 - c6f2 - c1f3 - c4f4 + c7f5 + c2f6 + c3f7));
+	output[3] = myround(0.5 * (c0f0 + c7f1 - c2f2 - c5f3 + c4f4 + c3f5 - c6f6 - c1f7));
+	output[4] = myround(0.5 * (c0f0 - c7f1 - c2f2 + c5f3 + c4f4 - c3f5 - c6f6 + c1f7));
+	output[5] = myround(0.5 * (c0f0 - c5f1 - c6f2 + c1f3 - c4f4 - c7f5 + c2f6 - c3f7));
+	output[6] = myround(0.5 * (c0f0 - c3f1 + c6f2 + c7f3 - c4f4 + c1f5 - c2f6 + c5f7));
+	output[7] = myround(0.5 * (c0f0 - c1f1 + c2f2 - c3f3 + c4f4 - c5f5 + c6f6 - c7f7));
 }
 
 void DCT::_transpose(const Block& input, Block& output) {
@@ -174,13 +164,29 @@ void DCT::forwardDCT_BF(const Block& input, Block& output) {
 	//暴力算法
 	for (int u = 0; u < BLOCK_ROWCNT; ++u) {
 		for (int v = 0; v < BLOCK_COLCNT; ++v) {
-			double t = 0;
+			float t = 0;
 			for (int x = 0; x < BLOCK_ROWCNT; ++x) {
 				for (int y = 0; y < BLOCK_COLCNT; ++y) {
 					t += input[x][y] * _get_coeff(u, v, x, y);
 				}
 			}
-			output[u][v] = t;
+			output[u][v] = myround(t);
+		}
+	}
+}
+
+[[deprecated]]
+void DCT::inverseDCT_BF(const Block& input, Block& output){
+	//暴力算法
+	for (int x = 0; x < BLOCK_ROWCNT; ++x) {
+		for (int y = 0; y < BLOCK_COLCNT; ++y) {
+			float t = 0;
+			for (int u = 0; u < BLOCK_ROWCNT; ++u) {
+				for (int v = 0; v < BLOCK_COLCNT; ++v) {
+					t += input[u][v] * _get_coeff(u, v, x, y);
+				}
+			}
+			output[x][y] = myround(t);
 		}
 	}
 }
@@ -188,7 +194,7 @@ void DCT::forwardDCT_BF(const Block& input, Block& output) {
 void DCT::inverseDCT(const Block& input, Block& output){
 	Block tmpBlock;
 	Block tmpBlock2;
-	//2维DCT拆解为2次1维DCT
+	//2维IDCT拆解为2次1维IDCT
 	for (int i = 0; i < BLOCK_ROWCNT; ++i) {
 		_1D_8P_IDCT(input[i], tmpBlock[i]);
 	}

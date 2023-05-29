@@ -6,6 +6,9 @@
 #ifndef UtilFunc_h__
 #define UtilFunc_h__
 #include <winsock.h>
+#include <iostream>
+#include <iomanip>
+#include "BitString.h"
 #include "typedef.h"
 #pragma comment(lib,"ws2_32.lib")
 
@@ -28,6 +31,44 @@ inline void getZigzaggedSequence(const Tx (&seq)[BLOCK_ROWCNT][BLOCK_COLCNT], Ty
 	}
 }
 
+template<typename Tx, typename Ty>
+inline void dezigzagSequence(const Ty(&zigzaggedSeq)[BLOCK_COLCNT * BLOCK_ROWCNT], Tx(&seq)[BLOCK_ROWCNT][BLOCK_COLCNT]) {
+	static DWORD zigzag[8][8] = {
+			0,1,5,6,14,15,27,28,
+			2,4,7,13,16,26,29,42,
+			3,8,12,17,25,30,41,43,
+			9,11,18,24,31,40,44,53,
+			10,19,23,32,39,45,52,54,
+			20,22,33,38,46,51,55,60,
+			21,34,37,47,50,56,59,61,
+			35,36,48,49,57,58,62,63
+	};
+	for (DWORD r = 0; r < BLOCK_ROWCNT; ++r) {
+		for (DWORD c = 0; c < BLOCK_COLCNT; ++c) {
+			seq[r][c] = zigzaggedSeq[zigzag[r][c]];
+		}
+	}
+}
+
+inline void printBlock(const Block& block) {
+	for (int i = 0; i < BLOCK_ROWCNT; ++i) {
+		for (int j = 0; j < BLOCK_COLCNT; ++j) {
+			printf("%4d", block[i][j]);
+		}
+		putchar('\n');
+	}
+	putchar('\n');
+}
+
+inline void printBitStringTable(std::vector<std::vector<BitString>>& bitStringTable) {
+	printf("%18s%5s\n", "code", "len");
+	for (int i = 1; i < bitStringTable.size(); ++i) {
+		for (int j = 0; j < bitStringTable[i].size(); ++j) {
+			std::cout << std::setw(18) << bitStringTable[i][j] << std::setw(5) << i << "\n";
+		}
+	}
+}
+
 inline const char* getoptarg(int argc, char** argv, const char* opt) {
 	for (int i = 0; i < argc - 1; ++i) {
 		if (strcmp(argv[i], opt) == 0) {
@@ -45,7 +86,6 @@ inline bool testopt(int argc, char** argv, const char* opt) {
 	}
 	return false;
 }
-
 
 inline DWORD big_endian(DWORD val) {
 	return htonl(val);
@@ -72,5 +112,13 @@ inline int myround(float val) {
 	}
 }
 
+inline int myround(double val) {
+	int intval = (int)val;
+	if (val - intval >= 0.5f) {
+		return intval + 1;
+	} else {
+		return intval;
+	}
+}
 
 #endif // UtilFunc_h__

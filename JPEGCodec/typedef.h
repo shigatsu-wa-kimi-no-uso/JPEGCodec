@@ -1,12 +1,12 @@
 /*
 * typedef.h
-* Written by kiminouso, 2023/05/01
+* Written by kiminouso, 2023/04/05
 */
 #pragma once
 #ifndef typedef_h__
 #define typedef_h__
 #include <vector>
-
+#include <assert.h>
 #define MACROS
 #define ALIAS
 #define STRUCTS
@@ -15,7 +15,7 @@
 #define BLOCK_COLCNT 8
 #define BLOCK_ROWCNT 8
 #define HUFFMAN_CODE_LENGTH_LIMIT 16
-#define ALIGN(val,alignment_index)  (((val)+((1<<alignment_index) - 1)) & (~((1<<alignment_index) - 1)))
+#define ALIGN(val,alignment_index)  (((val)+((((1)<<(alignment_index))) - 1)) & (~((((1)<<(alignment_index))) - 1)))
 #endif
 
 #ifdef ALIAS
@@ -190,6 +190,7 @@ public:
 	}
 
 	T* operator[](const DWORD index) const {
+		assert(index < row_cnt);
 		return _2darr[index];
 	}
 
@@ -446,8 +447,6 @@ struct RLCode {
 	int zeroCnt;
 	int value;
 };
-
-
 
 #endif
 #pragma pack(pop)

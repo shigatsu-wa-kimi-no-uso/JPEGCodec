@@ -4,6 +4,10 @@
 */
 #include "BitWriter.h"
 
+const BYTE BitWriter::_mask() const {
+	return (1 << _lastByteBitCnt) - 1;
+}
+
 BitWriter::BitWriter(std::vector<BYTE>& data) :_lastByteBitCnt(8), _data(data){
 }
 

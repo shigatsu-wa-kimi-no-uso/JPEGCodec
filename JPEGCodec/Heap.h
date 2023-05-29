@@ -13,21 +13,27 @@ class Heap
 private:
 	Compare_Func_t _cmpFunc;
 	Container_t _heap;
+
 	size_t _lastIndex() {
 		return _heap.size() == 0 ? 0 : _heap.size() - 1;
 	}
+
 	size_t _topIndex() {
 		return 0;
 	}
+
 	size_t _leftSon(size_t index) {
 		return (index << 1) + 1;
 	}
+
 	size_t _rightSon(size_t index) {
 		return (index << 1) + 2;
 	}
+
 	size_t _parent(size_t index) {
 		return (index - 1) >> 1;
 	}
+
 	void _emerge(size_t index) {
 		size_t currIndex = index;
 		while (currIndex != _topIndex()) {
@@ -42,6 +48,7 @@ private:
 			}
 		}
 	}
+
 	void _sink(size_t index) {
 		size_t currIndex = index;
 		while (currIndex != _lastIndex()) {
@@ -66,10 +73,10 @@ private:
 			}
 		}
 	}
-
-
 public:
-	Heap() {}
+	Heap() {
+	}
+
 	Heap(size_t initCapacity) {
 		reserve(initCapacity);
 	}
@@ -81,9 +88,11 @@ public:
 	size_t size() {
 		return _heap.size();
 	}
+
 	size_t capacity() {
 		return _heap.capacity();
 	}
+
 	const Elem_t& top() {
 		return _heap[_topIndex()];
 	}
@@ -98,6 +107,7 @@ public:
 		_heap.pop_back();
 		_sink(_topIndex());
 	}
+
 	void clear() {
 		_heap.clear();
 	}

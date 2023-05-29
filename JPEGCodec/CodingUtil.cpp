@@ -5,7 +5,6 @@
 #include "CodingUtil.h"
 #include "UtilFunc.h"
 
-
 void RunLengthCodec::encode(const int* seq,const int seqLen, RLCode* codeBuf, int* count){
 	int zeroCnt = 0;
 	int codePos = 0;
@@ -41,10 +40,10 @@ void RunLengthCodec::encode(const int* seq,const int seqLen, RLCode* codeBuf, in
 void RunLengthCodec::decode(const RLCode* codes, const int codeCnt, const int seqLength,int* seqBuf){
 	int i, pos = 0;
 	for (i = 0; i < codeCnt - 1; ++i) {
-		seqBuf[pos++] = codes[i].value;
 		for (int j = 0; j < codes[i].zeroCnt; ++j) {
 			seqBuf[pos++] = 0;
 		}
+		seqBuf[pos++] = codes[i].value;
 	}
 	//EOB判断
 	if (codes[i].value == 0 && codes[i].zeroCnt == 0) {
@@ -52,14 +51,14 @@ void RunLengthCodec::decode(const RLCode* codes, const int codeCnt, const int se
 			seqBuf[pos++] = 0;
 		}
 	} else {
-		seqBuf[pos++] = codes[i].value;
 		for (int j = 0; j < codes[i].zeroCnt; ++j) {
 			seqBuf[pos++] = 0;
 		}
+		seqBuf[pos++] = codes[i].value;
 	}
 }
 
-BitString BitCodec::getBitString(int val){
+BitString BitCodec::getBitString(int val) {
 	if (val < 0) {
 		val = -val;
 		BitString bitString(val);
@@ -69,21 +68,20 @@ BitString BitCodec::getBitString(int val){
 	return BitString(val);
 }
 
-BYTE BitCodec::mergeToByte(int high4, int low4){
+BYTE BitCodec::mergeToByte(int high4, int low4) {
 	return ((0xF0 & (BYTE)(high4 << 4)) | (0x0F & (BYTE)low4));
 }
 
 int BitCodec::getValue(const BitString& bitString) {
 	//负数时,最高位为0
 	if (bitString.bit(bitString.length() - 1) == 0) {
-		return -(~bitString.value());
+		return -((int)(~bitString).value());
 	} else {
 		return bitString.value();
 	}
 }
 
 DPCM::DPCM() :_preVal(0){
-
 }
 
 void DPCM::reset(){
@@ -97,5 +95,7 @@ int DPCM::nextDiff(int val){
 }
 
 int DPCM::nextVal(int diff){
-	return diff + _preVal;
+	int res = diff + _preVal;
+	_preVal = res;
+	return res;
 }

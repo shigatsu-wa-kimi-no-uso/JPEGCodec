@@ -1,3 +1,7 @@
+/*
+* Huffman.h
+* Written by kiminouso, 2023/05/03
+*/
 #include "IntHuffman.h"
 
 IntHuffman::TreeNode::TreeNode(size_t freq, const DWORD& val)
@@ -109,12 +113,11 @@ void IntHuffman::getTable(std::vector<TableEntry>& table) {
 
 //根据范式哈夫曼符号表canonicalTable获取范式哈夫曼编码表bitStringTable
 //返回的bitStringTable中, 元素bitStringTable[i][j]恰好为符号canonicalTable[i][j]对应的编码
-
 void IntHuffman::getCanonicalCodes(const HuffmanTable& canonicalTable, std::vector<std::vector<BitString>>& bitStringTable) {
 	size_t count = canonicalTable.size();
 	size_t i = 0;
 	bitStringTable.resize(canonicalTable.size());
-	bitStringTable[0].push_back(BitString());
+	bitStringTable[0].emplace_back();
 	int pushedCnt = 0;
 	while (1) {
 		size_t lastLen = i;
@@ -144,7 +147,6 @@ void IntHuffman::getCanonicalCodes(const HuffmanTable& canonicalTable, std::vect
 //表的结构:二维向量T
 //T[i]: 一维向量,向量中存储对应编码长度为i的符号
 //T[i][j]: 整型,表示一个符号
-
 void IntHuffman::getCanonicalTable(std::vector<int>& lengthCountTable, HuffmanTable& canonicalTable) {
 	struct Entry {
 		size_t freq;
@@ -196,7 +198,7 @@ void IntHuffman::getCanonicalCodes(const std::vector<int>& canonicalTable, std::
 			}
 			thisLenCnt = 0;
 		}
-		lengthDiff = i - lastLen;
+		lengthDiff = (int)(i - lastLen);
 		const BitString& last = bitStrings.back();
 		BitString curr = last;
 		curr = last + 1;
