@@ -8,8 +8,6 @@ https://zhuanlan.zhihu.com/p/633152821
 
 ## 用法
 
-![image-20230529190247010](C:\Users\Administrator\Documents\Visual Studio 2022\Projects\C++\JPEGCodec\README.assets\image-20230529190247010.png)
-
 | 命令选项       | 说明                                                         |
 | -------------- | ------------------------------------------------------------ |
 | -encode        | 指示程序以编码模式工作                                       |
