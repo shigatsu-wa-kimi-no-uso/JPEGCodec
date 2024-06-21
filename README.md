@@ -4,7 +4,6 @@ JPEG编解码器
 
 完成于2023年5月29日
 
-https://zhuanlan.zhihu.com/p/633152821
 
 ## 用法
 
